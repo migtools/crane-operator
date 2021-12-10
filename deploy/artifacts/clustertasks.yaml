@@ -1,0 +1,374 @@
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      This is where a really long-form explanation of what is happening in
+      crane-apply ClusterTask would go.
+    migration.openshift.io/run-after: crane-transform
+  labels:
+    app: crane-runner
+  name: crane-apply
+spec:
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: crane-apply
+    script: |
+      # TODO(djzager): Should convert this to command & args
+      /crane apply \
+        --export-dir=$(workspaces.export.path) \
+        --transform-dir=$(workspaces.transform.path) \
+        --output-dir=$(workspaces.apply.path)
+      find $(workspaces.apply.path)
+  workspaces:
+  - description: |
+      This is the folder where the results of crane export were stored.
+    mountPath: /var/crane/export
+    name: export
+  - description: |
+      This is the folder where we will store the results of crane transform.
+    mountPath: /var/crane/transform
+    name: transform
+  - description: |
+      This is the folder where we will store the results of crane apply.
+    mountPath: /var/crane/apply
+    name: apply
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Export all of the resources from a given cluster's namespace.
+    migration.openshift.io/placeholder: "true"
+  labels:
+    app: crane-runner
+  name: crane-export
+spec:
+  params:
+  - description: |
+      The name of the context from kubeconfig representing the source
+      cluster.
+
+      You can get this information in your current environment using
+      `kubectl config get-contexts` to describe your one or many
+      contexts.
+    name: src-context
+    type: string
+  - description: |
+      The source cluster namespace from which to export resources.
+    name: src-namespace
+    type: string
+  steps:
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/config
+    image: quay.io/konveyor/crane-runner:latest
+    name: crane-export
+    script: |
+      # Workspaces referencing secrets are read only, so we can't run
+      # anything like kubectl config use-context as that would fail
+      # the task. Instead we just create a whole new config to make
+      # sure we are using the correct context
+      # TODO(djzager): remove when `crane export` can handle context + namespace
+      kubectl --context $(params.src-context) config view --flatten --minify > kubeconfig
+      export KUBECONFIG=$(pwd)/kubeconfig
+
+      /crane export \
+        --context=$(params.src-context) \
+        --namespace=$(params.src-namespace) \
+        --export-dir=$(workspaces.export.path) \
+
+      # Do this so we have some breadcrumbs in case our demo blows up
+      find $(workspaces.export.path)
+  workspaces:
+  - description: |
+      Directory where results of crane export will be stored for future use
+      in other tasks.
+    mountPath: /var/crane/export
+    name: export
+  - description: |
+      The kubeconfig for accessing the source cluster.
+    name: kubeconfig
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      This is where a really long-form explanation of what is happening in
+      crane-transform ClusterTask would go.
+  labels:
+    app: crane-runner
+  name: crane-transform
+spec:
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: crane-transform
+    script: |
+      /crane version
+      /crane transform \
+        --ignored-patches-dir=$(workspaces.ignored-patches.path) \
+        --flags-file=$(workspaces.craneconfig.path) \
+        --export-dir=$(workspaces.export.path) \
+        --transform-dir=$(workspaces.transform.path)
+
+      # Do this so we have some breadcrumbs in case our demo blows up
+      find $(workspaces.transform.path)
+      if [ "$(workspaces.ignored-patches.bound)" == "true" ]; then
+        find $(workspaces.ignored-patches.path)
+      fi
+  workspaces:
+  - description: |
+      This is the folder where the results of crane export were stored.
+    mountPath: /var/crane/export
+    name: export
+  - description: |
+      This is the folder where we will store the results of crane transform.
+    mountPath: /var/crane/transform
+    name: transform
+  - description: |
+      This is the folder where the results of crane ignored-patches were stored.
+    mountPath: /var/crane/ignored-patches
+    name: ignored-patches
+    optional: true
+  - description: |
+      This is where we hold the configuration file for crane.
+    mountPath: /var/crane/config
+    name: craneconfig
+    optional: true
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      This is a lazy task that just takes a workspace, runs git init and adds
+      a remote url before pushing it.
+      It's expected that the serviceAccount used to run this task has the
+      authentication credentials for the git repo.
+      See https://tekton.dev/docs/pipelines/auth/#basic-auth-for-git for
+      details.
+  labels:
+    app: crane-runner
+  name: git-init-push
+spec:
+  params:
+  - description: Git remote url
+    name: git-remote-url
+    type: string
+  - description: Git user.name
+    name: user-name
+    type: string
+  - description: Git user.email
+    name: user-email
+    type: string
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: git-init-push
+    script: |
+      git config --global user.email "$(params.user-email)"
+      git config --global user.name "$(params.user-name)"
+
+      # TODO(djzager): Have a discussion to see if this is the kind of ClusterTask
+      # we want to support in this project. If we are going to support it,
+      # we should do better than blindly force push to a repo.
+      cd "$(workspaces.uninitialized-git-repo.path)"
+
+      # In case we are running again after failed attempt
+      rm -rf .git
+
+      # The actual lazy push
+      git init .
+      git remote add origin "$(params.git-remote-url)"
+      git add .
+      git commit -m "commit from git-init-push ClusterTask"
+      git push -fu origin HEAD
+  workspaces:
+  - description: |
+      This is the location of the uninitialized git repository to be pushed.
+    name: uninitialized-git-repo
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Take the resources from crane-apply and run kubectl apply -f.
+  labels:
+    app: crane-runner
+  name: kubectl-apply-files
+spec:
+  params:
+  - description: The context from the kubeconfig that represents the destination cluster.
+    name: dest-context
+    type: string
+  steps:
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/config
+    image: quay.io/konveyor/crane-runner:latest
+    name: kubectl-apply
+    script: |
+      # TODO(djzager): come up with better way to use internal ip
+      kubectl --context $(params.dest-context) config view --flatten --minify > kubeconfig
+      yq eval --inplace --exit-status '.clusters[0].cluster.server |= "https://kubernetes.default.svc"' kubeconfig
+      export KUBECONFIG=$(pwd)/kubeconfig
+
+      kubectl apply --recursive=true -f $(workspaces.apply.path)/
+  workspaces:
+  - description: |
+      This is the folder storing the resources to be applied using kubectl.
+    mountPath: /var/crane/apply
+    name: apply
+  - description: |
+      The user's kubeconfig
+    name: kubeconfig
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Run kubectl apply -k against a kustomize directory.
+  labels:
+    app: crane-runner
+  name: kubectl-apply-kustomize
+spec:
+  params:
+  - description: The context from the kubeconfig that represents the destination cluster.
+    name: dest-context
+    type: string
+  steps:
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/config
+    image: quay.io/konveyor/crane-runner:latest
+    name: kubectl-apply
+    script: |
+      # TODO(djzager): come up with better way to use internal ip
+      kubectl --context $(params.dest-context) config view --flatten --minify > kubeconfig
+      yq eval --inplace --exit-status '.clusters[0].cluster.server |= "https://kubernetes.default.svc"' kubeconfig
+      export KUBECONFIG=$(pwd)/kubeconfig
+
+      kubectl apply -k $(workspaces.kustomize.path)/
+  workspaces:
+  - description: |
+      This is the folder storing a kustomization file to be applied.
+    name: kustomize
+  - description: |
+      The user's kubeconfig
+    name: kubeconfig
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Scale the workloads by changing the number of replicas
+    migration.openshift.io/placeholder: "true"
+  labels:
+    app: crane-runner
+  name: kubectl-scale-down
+spec:
+  params:
+  - description: |
+      The name of the context from kubeconfig representing the source
+      cluster.
+
+      You can get this information in your current environment using
+      `kubectl config get-contexts` to describe your one or many
+      contexts.
+    name: src-context
+    type: string
+  - description: |
+      The source cluster namespace from which to export resources.
+    name: src-namespace
+    type: string
+  - description: |
+      The kind of resource to be scaled down, it should not be a comma separated list
+    name: kind
+    type: string
+  - description: |
+      The label selector used to scale down resources in source namespace/context
+    name: selector
+    type: string
+  steps:
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/config
+    image: quay.io/konveyor/crane-runner:latest
+    name: kubectl-scale-down
+    script: |
+      RESOURCES=$(kubectl --context $(params.src-context) --namespace $(params.src-namespace) get \
+                    deployments,replicasets,statefulsets --no-headers --selector     \
+                    $(params.selector)| awk '{print $1}')
+
+      for RESOURCE in $RESOURCES; do
+        echo "scaling down ${RESOURCE}"
+        kubectl scale --context $(params.src-context) --namespace $(params.src-namespace) --replicas=0 ${RESOURCE}
+      done
+  workspaces:
+  - description: |
+      The kubeconfig for accessing the source cluster.
+    name: kubeconfig
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      This task takes the result of a crane-apply and structure it as an
+      application base kustomization.
+  labels:
+    app: crane-runner
+  name: kustomize-namespace
+spec:
+  params:
+  - description: The namespace we are importing to.
+    name: dest-namespace
+    type: string
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: kustomize-namespace
+    script: |
+      # Make common base directory
+      kustomize_base_dir="$(workspaces.kustomize.path)/base"
+      mkdir -p ${kustomize_base_dir}
+
+      # Fill in base kustomization.yaml
+      base_kustomization="${kustomize_base_dir}/kustomization.yaml"
+      echo "apiVersion: kustomize.config.k8s.io/v1beta1" > "${base_kustomization}"
+      echo "kind: Kustomization" >> "${base_kustomization}"
+      echo "" >> "${base_kustomization}"
+      echo "resources:" >> "${base_kustomization}"
+      # Find the resources from the apply step
+      yamls=$(find $(workspaces.apply.path)/resources -type f -name \*.yaml)
+      for yaml in ${yamls}; do
+        cp ${yaml} ${kustomize_base_dir}
+        file=$(basename "${yaml}")
+        echo "- ${file}" >> "${base_kustomization}"
+      done
+      cat "${base_kustomization}"
+
+      # Fill in kustomization.yaml
+      kustomization="$(workspaces.kustomize.path)/kustomization.yaml"
+      echo "apiVersion: kustomize.config.k8s.io/v1beta1" > "${kustomization}"
+      echo "kind: Kustomization" >> "${kustomization}"
+      echo "" >> "${kustomization}"
+      echo "namespace: $(params.dest-namespace)" >> "${kustomization}"
+      echo "" >> "${kustomization}"
+      echo "resources:" >> "${kustomization}"
+      echo "- base/" >> "${kustomization}"
+      cat "${kustomization}"
+
+      # Verify it builds
+      kustomize build $(workspaces.kustomize.path)/
+  workspaces:
+  - description: |
+      This is the folder where we will store the results of crane apply.
+    mountPath: /var/crane/apply
+    name: apply
+  - description: |
+      This is where the kustomize related manifests will be saved.
+    name: kustomize
