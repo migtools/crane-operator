@@ -4,7 +4,7 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
-  name: mtk-operator.v0.0.0
+  name: mtk-operator.v99.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -39,8 +39,8 @@ spec:
   - MTK
   links:
   - name: Mtk Operator
-    url: https://mtk-operator.domain
+    url: https://github.com/konveyor/mtk-operator
   maturity: alpha
   provider:
     name: RedHat
-  version: 0.0.0
+  version: 99.0.0

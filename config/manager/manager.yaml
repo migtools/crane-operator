@@ -31,7 +31,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: quay.io/jgabani/crane-operator-container:0.0.1
+        image: quay.io/konveyor/crane-operator-container:0.0.1
         imagePullPolicy: Always
         name: manager
         securityContext:

@@ -16,7 +16,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.15.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: mtk-operator.v0.0.1
+  name: mtk-operator.v99.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -74,18 +74,6 @@ spec:
           - patch
           - update
           - watch
-        - apiGroups:
-          - authentication.k8s.io
-          resources:
-          - tokenreviews
-          verbs:
-          - create
-        - apiGroups:
-          - authorization.k8s.io
-          resources:
-          - subjectaccessreviews
-          verbs:
-          - create
         serviceAccountName: mtk-operator-controller-manager
       deployments:
       - name: mtk-operator-controller-manager
@@ -121,7 +109,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: quay.io/jgabani/crane-operator-container:0.0.1
+                image: quay.io/konveyor/crane-operator-container:0.0.1
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
@@ -199,8 +187,8 @@ spec:
   - MTK
   links:
   - name: Mtk Operator
-    url: https://mtk-operator.domain
+    url: https://github.com/konveyor/mtk-operator
   maturity: alpha
   provider:
     name: RedHat
-  version: 0.0.1
+  version: 99.0.0

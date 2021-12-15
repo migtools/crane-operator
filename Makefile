@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.0.1
+VERSION ?= 99.0.0
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -101,7 +101,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 
 .PHONY: clustertasks
 clustertasks:
-	mkdir -p deploy/artifacts/ && touch deploy/artifacts/clustertasks.yaml | $(KUSTOMIZE) build $(CLUSTERTASK_SOURCE) > deploy/artifacts/clustertasks.yaml
+	mkdir -p deploy/artifacts/ && touch deploy/artifacts/manifests.yaml | $(KUSTOMIZE) build $(CLUSTERTASK_SOURCE) > deploy/artifacts/manifests.yaml
 
 ##@ Build
 
@@ -174,7 +174,7 @@ rm -rf $$TMP_DIR ;\
 endef
 
 .PHONY: bundle
-bundle: manifests kustomize clustertasks## Generate bundle manifests and metadata, then validate generated files.
+bundle: manifests kustomize clustertasks ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)

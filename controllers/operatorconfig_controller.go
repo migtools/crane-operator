@@ -24,8 +24,8 @@ import (
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
-	"os"
+	"k8s.io/apimachinery/pkg/util/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -59,14 +59,12 @@ type OperatorConfigReconciler struct {
 func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	// your logic here
-
 	err := createClusterTasks(ctx, log)
 
 	if err != nil {
 		log.Error(err, "Error creating cluster tasks")
 	} else {
-		log.Info("cluster task created")
+		log.Info("All the needed cluster task created")
 	}
 	return ctrl.Result{}, err
 }
@@ -75,31 +73,18 @@ func createClusterTasks(ctx context.Context, log logr.Logger) error {
 
 	clustertasks := v1beta1.ClusterTask{}
 	var err error
-
-	dir, err := os.Getwd()
-	if err != nil {
-		log.Error(err, "error getting working dir")
-		return err
-	}
-	log.Info(dir)
+	errs := []error{}
 
 	var data []byte
-	data, err = ioutil.ReadFile("clustertasks.yaml")
+	data, err = ioutil.ReadFile("manifests.yaml")
 	if err != nil {
 		return err
 	}
 
-	config, err := rest.InClusterConfig()
+	clientset, err := versioned.NewForConfig(config.GetConfigOrDie())
 	if err != nil {
 		return err
 	}
-
-	clientset, err := versioned.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	log.Info(string(data))
 
 	for _, doc := range strings.Split(string(data), "---") {
 		err = yaml.Unmarshal([]byte(doc), &clustertasks)
@@ -108,30 +93,14 @@ func createClusterTasks(ctx context.Context, log logr.Logger) error {
 		}
 		obj, err := clientset.TektonV1beta1().ClusterTasks().Create(ctx, &clustertasks, metav1.CreateOptions{})
 		if err != nil {
-			return err
+			errs = append(errs, err)
 		}
 		log.Info("Cluster task created", obj.Name, obj.Namespace)
 	}
+	if len(errs) != 0 {
+		return errors.NewAggregate(errs)
+	}
 
-	//clusterTask := v1beta1.ClusterTask{
-	//	ObjectMeta: metav1.ObjectMeta{
-	//		Name: "crane-apply",
-	//		Annotations: map[string]string{
-	//			"migration.openshift.io/run-after": "crane-transform",
-	//			"description":                      "This is where a really long-form explanation of what is happening in crane-apply ClusterTask would go.",
-	//		},
-	//	},
-	//	Spec: v1beta1.TaskSpec{
-	//		Steps: []v1beta1.Step{
-	//			{
-	//				Container: v1.Container{},
-	//				Script:    "/crane apply --export-dir=$(workspaces.export.path) --transform-dir=$(workspaces.transform.path) --output-dir=$(workspaces.apply.path) \n find $(workspaces.apply.path)",
-	//			},
-	//		},
-	//		Workspaces: nil,
-	//	},
-	//}
-	//_, err = clientset.TektonV1beta1().ClusterTasks().Create(ctx, &clusterTask, metav1.CreateOptions{})
 	return nil
 }
 

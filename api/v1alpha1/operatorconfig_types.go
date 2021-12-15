@@ -28,8 +28,6 @@ type OperatorConfigSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of OperatorConfig. Edit operatorconfig_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
 }
 
 // OperatorConfigStatus defines the observed state of OperatorConfig
