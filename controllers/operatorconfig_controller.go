@@ -18,16 +18,8 @@ package controllers
 
 import (
 	"context"
-	"github.com/ghodss/yaml"
-	"github.com/go-logr/logr"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
-	"io/ioutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"strings"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,10 +34,15 @@ type OperatorConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// rbac.authorization.k8s.io permissions are needed to create namespace limited role and rolebinding to create deployment and service within mtk-operator
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs/finalizers,verbs=update
 //+kubebuilder:rbac:groups=tekton.dev,resources=clustertasks,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="apps",namespace=mtk-operator,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=console.openshift.io,resourceNames=crane-ui-plugin,resources=consoleplugins,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",namespace=mtk-operator,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -66,42 +63,23 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		log.Info("All the needed cluster task created")
 	}
+
+	err = configureCranePlugin(ctx, log)
+
+	if err != nil {
+		log.Error(err, "error configuring crane plugin")
+	} else {
+		log.Info("Crane ui plugin configured")
+	}
 	return ctrl.Result{}, err
 }
 
+func configureCranePlugin(ctx context.Context, log logr.Logger) error {
+	return createResourcesFromFile("crane-ui-plugin.yaml", ctx, log)
+}
+
 func createClusterTasks(ctx context.Context, log logr.Logger) error {
-
-	clustertasks := v1beta1.ClusterTask{}
-	var err error
-	errs := []error{}
-
-	var data []byte
-	data, err = ioutil.ReadFile("manifests.yaml")
-	if err != nil {
-		return err
-	}
-
-	clientset, err := versioned.NewForConfig(config.GetConfigOrDie())
-	if err != nil {
-		return err
-	}
-
-	for _, doc := range strings.Split(string(data), "---") {
-		err = yaml.Unmarshal([]byte(doc), &clustertasks)
-		if err != nil {
-			return err
-		}
-		obj, err := clientset.TektonV1beta1().ClusterTasks().Create(ctx, &clustertasks, metav1.CreateOptions{})
-		if err != nil {
-			errs = append(errs, err)
-		}
-		log.Info("Cluster task created", obj.Name, obj.Namespace)
-	}
-	if len(errs) != 0 {
-		return errors.NewAggregate(errs)
-	}
-
-	return nil
+	return createResourcesFromFile("manifests.yaml", ctx, log)
 }
 
 // SetupWithManager sets up the controller with the Manager.

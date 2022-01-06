@@ -14,10 +14,10 @@ metadata:
         }
       ]
     capabilities: Basic Install
+    console.openshift.io/plugins: '["crane-ui-plugin"]'
     operators.operatorframework.io/builder: operator-sdk-v1.15.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: mtk-operator.v99.0.0
-  namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -36,6 +36,20 @@ spec:
     spec:
       clusterPermissions:
       - rules:
+        - apiGroups:
+          - console.openshift.io
+          resourceNames:
+          - crane-ui-plugin
+          resources:
+          - consoleplugins
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - crane.konveyor.io
           resources:
@@ -62,6 +76,19 @@ spec:
           - get
           - patch
           - update
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - rolebindings
+          - roles
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - tekton.dev
           resources:
@@ -170,6 +197,30 @@ spec:
           verbs:
           - create
           - patch
+        - apiGroups:
+          - ""
+          resources:
+          - services
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         serviceAccountName: mtk-operator-controller-manager
     strategy: deployment
   installModes:
