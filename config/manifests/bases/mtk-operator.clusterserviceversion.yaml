@@ -4,8 +4,8 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
+    console.openshift.io/plugins: '["crane-ui-plugin"]'
   name: mtk-operator.v99.0.0
-  namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:

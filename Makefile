@@ -17,6 +17,8 @@ endif
 # CLUSTERTASK_SOURCE define the location from where kustomize will build all the needed cluster tasks
 CLUSTERTASK_SOURCE ?= github.com/konveyor/crane-runner/manifests/
 
+# CRANE_UI_PLUGIN_SOURCE points to raw github manifest file for crane-ui-plugin
+CRANE_UI_PLUGIN_SOURCE ?= https://raw.githubusercontent.com/konveyor/crane-ui-plugin/main/oc-manifest.yaml
 
 # DEFAULT_CHANNEL defines the default channel used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g DEFAULT_CHANNEL = "stable")
@@ -103,6 +105,10 @@ test: manifests generate fmt vet envtest ## Run tests.
 clustertasks:
 	mkdir -p deploy/artifacts/ && touch deploy/artifacts/manifests.yaml | $(KUSTOMIZE) build $(CLUSTERTASK_SOURCE) > deploy/artifacts/manifests.yaml
 
+.PHONY: crane-ui-plugin
+crane-ui-plugin:
+	mkdir -p deploy/artifacts/ && touch deploy/artifacts/crane-ui-plugin.yaml | curl $(CRANE_UI_PLUGIN_SOURCE) > deploy/artifacts/crane-ui-plugin.yaml
+
 ##@ Build
 
 .PHONY: build
@@ -136,7 +142,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
-deploy: manifests kustomize clustertasks## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: manifests kustomize clustertasks ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
@@ -174,7 +180,7 @@ rm -rf $$TMP_DIR ;\
 endef
 
 .PHONY: bundle
-bundle: manifests kustomize clustertasks ## Generate bundle manifests and metadata, then validate generated files.
+bundle: manifests kustomize clustertasks crane-ui-plugin ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
