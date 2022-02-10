@@ -8,8 +8,6 @@ metadata:
 rules:
 - apiGroups:
   - console.openshift.io
-  resourceNames:
-  - crane-ui-plugin
   resources:
   - consoleplugins
   verbs:
@@ -47,19 +45,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - rolebindings
-  - roles
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - tekton.dev
   resources:
   - clustertasks
@@ -78,7 +63,7 @@ kind: Role
 metadata:
   creationTimestamp: null
   name: manager-role
-  namespace: mtk-operator
+  namespace: openshift-migration
 rules:
 - apiGroups:
   - ""
@@ -96,6 +81,18 @@ rules:
   - apps
   resources:
   - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
   verbs:
   - create
   - delete

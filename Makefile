@@ -18,7 +18,9 @@ endif
 CLUSTERTASK_SOURCE ?= github.com/konveyor/crane-runner/manifests/
 
 # CRANE_UI_PLUGIN_SOURCE points to raw github manifest file for crane-ui-plugin
-CRANE_UI_PLUGIN_SOURCE ?= https://raw.githubusercontent.com/konveyor/crane-ui-plugin/main/oc-manifest.yaml
+CRANE_UI_PLUGIN_SOURCE ?= https://raw.githubusercontent.com/konveyor/crane-ui-plugin/main/deploy.yaml
+
+CRANE_PROXY_SOURCE ?= https://raw.githubusercontent.com/konveyor/crane-reverse-proxy/main/deploy.yml
 
 # DEFAULT_CHANNEL defines the default channel used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g DEFAULT_CHANNEL = "stable")
@@ -109,6 +111,9 @@ clustertasks:
 crane-ui-plugin:
 	mkdir -p deploy/artifacts/ && touch deploy/artifacts/crane-ui-plugin.yaml | curl $(CRANE_UI_PLUGIN_SOURCE) > deploy/artifacts/crane-ui-plugin.yaml
 
+.PHONY: proxy
+proxy:
+	mkdir -p deploy/artifacts/ && touch deploy/artifacts/proxy.yaml | curl $(CRANE_PROXY_SOURCE) > deploy/artifacts/proxy.yaml
 ##@ Build
 
 .PHONY: build
@@ -180,10 +185,10 @@ rm -rf $$TMP_DIR ;\
 endef
 
 .PHONY: bundle
-bundle: manifests kustomize clustertasks crane-ui-plugin ## Generate bundle manifests and metadata, then validate generated files.
+bundle: manifests kustomize clustertasks crane-ui-plugin proxy ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --extra-service-accounts proxy
 	operator-sdk bundle validate ./bundle
 
 .PHONY: bundle-build
