@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,15 +33,15 @@ type OperatorConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// rbac.authorization.k8s.io permissions are needed to create namespace limited role and rolebinding to create deployment and service within mtk-operator
+// rbac.authorization.k8s.io permissions are needed to create namespace limited role and rolebinding to create deployment and service within openshift-migration
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs/finalizers,verbs=update
 //+kubebuilder:rbac:groups=tekton.dev,resources=clustertasks,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="apps",namespace=mtk-operator,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=console.openshift.io,resourceNames=crane-ui-plugin,resources=consoleplugins,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",namespace=mtk-operator,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="apps",namespace=openshift-migration,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=console.openshift.io,resources=consoleplugins,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",namespace=openshift-migration,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=route.openshift.io,namespace=openshift-migration,resources=routes,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -71,7 +70,19 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		log.Info("Crane ui plugin configured")
 	}
+
+	err = configureProxy(ctx, log)
+	if err != nil {
+		log.Error(err, "error configuring proxy")
+	} else {
+		log.Info("Proxy Configured")
+	}
+
 	return ctrl.Result{}, err
+}
+
+func configureProxy(ctx context.Context, log logr.Logger) error {
+	return createResourcesFromFile("proxy.yaml", ctx, log)
 }
 
 func configureCranePlugin(ctx context.Context, log logr.Logger) error {

@@ -2,13 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: crane-ui-plugin
-  namespace: mtk-operator
+  namespace: openshift-migration
   labels:
     app: crane-ui-plugin
     app.kubernetes.io/component: crane-ui-plugin
     app.kubernetes.io/instance: crane-ui-plugin
     app.kubernetes.io/part-of: crane-ui-plugin
-    app.openshift.io/runtime-namespace: mtk-operator
+    app.openshift.io/runtime-namespace: openshift-migration
 spec:
   replicas: 1
   selector:
@@ -53,7 +53,7 @@ metadata:
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: console-serving-cert
   name: crane-ui-plugin
-  namespace: mtk-operator
+  namespace: openshift-migration
   labels:
     app: crane-ui-plugin
     app.kubernetes.io/component: crane-ui-plugin
@@ -78,6 +78,6 @@ spec:
   displayName: 'Crane UI Plugin'
   service:
     name: crane-ui-plugin
-    namespace: mtk-operator
+    namespace: openshift-migration
     port: 9001
     basePath: '/'

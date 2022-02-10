@@ -59,34 +59,37 @@ func createResourcesFromFile(path string, ctx context.Context, log logr.Logger) 
 	}
 
 	for _, resource := range data {
-
-		obj := &unstructured.Unstructured{}
-		_, gvk, err := decoder.Decode([]byte(resource), nil, obj)
-		if err != nil {
-			return err
-		}
-
-		mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-		if err != nil {
-			return err
-		}
-
-		if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-			// namespaced resources should specify the namespace
-			dynamicResource = dynamicConfig.Resource(mapping.Resource).Namespace(obj.GetNamespace())
-		} else {
-			// for cluster-wide resources
-			dynamicResource = dynamicConfig.Resource(mapping.Resource)
-		}
-
-		_, err = dynamicResource.Create(ctx, obj, metav1.CreateOptions{})
-
-		if err != nil {
-			if !errors.IsAlreadyExists(err) {
-				errs = append(errs, err)
+		if len(resource) > 0 {
+			obj := &unstructured.Unstructured{}
+			_, gvk, err := decoder.Decode([]byte(resource), nil, obj)
+			if err != nil {
+				return err
 			}
-		} else {
-			log.Info(fmt.Sprintf("%s created", obj.GetKind()), obj.GetName(), obj.GetNamespace())
+
+			mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+			if err != nil {
+				return err
+			}
+
+			if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+				// namespaced resources should specify the namespace
+				dynamicResource = dynamicConfig.Resource(mapping.Resource).Namespace(InstallNamespace)
+			} else {
+				// for cluster-wide resources
+				dynamicResource = dynamicConfig.Resource(mapping.Resource)
+			}
+
+			_, err = dynamicResource.Create(ctx, obj, metav1.CreateOptions{})
+
+			if err != nil {
+				if !errors.IsAlreadyExists(err) {
+					errs = append(errs, err)
+				} else {
+					log.Info(fmt.Sprintf("%s already exists", obj.GetKind()), obj.GetName(), obj.GetNamespace())
+				}
+			} else {
+				log.Info(fmt.Sprintf("%s created", obj.GetKind()), obj.GetName(), obj.GetNamespace())
+			}
 		}
 	}
 

@@ -5,6 +5,7 @@ metadata:
     alm-examples: '[]'
     capabilities: Basic Install
     console.openshift.io/plugins: '["crane-ui-plugin"]'
+    operatorframework.io/suggested-namespace: openshift-migration
   name: mtk-operator.v99.0.0
 spec:
   apiservicedefinitions: {}
