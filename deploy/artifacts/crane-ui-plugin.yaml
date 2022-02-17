@@ -23,21 +23,25 @@ spec:
         - name: crane-ui-plugin
           image: quay.io/konveyor/crane-ui-plugin
           ports:
-            - containerPort: 9001
+            - containerPort: 9443
               protocol: TCP
           imagePullPolicy: Always
-          args:
-            - '--ssl'
-            - '--cert=/var/serving-cert/tls.crt'
-            - '--key=/var/serving-cert/tls.key'
           volumeMounts:
-            - name: console-serving-cert
+            - name: plugin-serving-cert
               readOnly: true
               mountPath: /var/serving-cert
+            - name: nginx-conf
+              readOnly: true
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
       volumes:
-        - name: console-serving-cert
+        - name: plugin-serving-cert
           secret:
-            secretName: console-serving-cert
+            secretName: plugin-serving-cert
+            defaultMode: 420
+        - name: nginx-conf
+          configMap:
+            name: nginx-conf
             defaultMode: 420
       restartPolicy: Always
       dnsPolicy: ClusterFirst
@@ -48,10 +52,35 @@ spec:
       maxSurge: 25%
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+  namespace: openshift-migration
+  labels:
+    app: crane-ui-plugin
+    app.kubernetes.io/part-of: crane-ui-plugin
+data:
+  nginx.conf: |
+    error_log /dev/stdout info;
+    events {}
+    http {
+      access_log         /dev/stdout;
+      include            /etc/nginx/mime.types;
+      default_type       application/octet-stream;
+      keepalive_timeout  65;
+      server {
+        listen              9443 ssl;
+        ssl_certificate     /var/serving-cert/tls.crt;
+        ssl_certificate_key /var/serving-cert/tls.key;
+        root                /usr/share/nginx/html;
+      }
+    }
+---
+apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    service.alpha.openshift.io/serving-cert-secret-name: console-serving-cert
+    service.alpha.openshift.io/serving-cert-secret-name: plugin-serving-cert
   name: crane-ui-plugin
   namespace: openshift-migration
   labels:
@@ -61,10 +90,10 @@ metadata:
     app.kubernetes.io/part-of: crane-ui-plugin
 spec:
   ports:
-    - name: 9001-tcp
+    - name: 9443-tcp
       protocol: TCP
-      port: 9001
-      targetPort: 9001
+      port: 9443
+      targetPort: 9443
   selector:
     app: crane-ui-plugin
   type: ClusterIP
@@ -75,9 +104,16 @@ kind: ConsolePlugin
 metadata:
   name: crane-ui-plugin
 spec:
-  displayName: 'Crane UI Plugin'
+  displayName: 'Konveyor Crane UI Plugin'
   service:
     name: crane-ui-plugin
     namespace: openshift-migration
-    port: 9001
+    port: 9443
     basePath: '/'
+  proxy:
+    - type: Service
+      alias: remote-cluster
+      service:
+        name: proxy
+        namespace: openshift-migration
+        port: 8443
