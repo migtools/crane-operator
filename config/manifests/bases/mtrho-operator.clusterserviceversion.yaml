@@ -6,7 +6,8 @@ metadata:
     capabilities: Basic Install
     console.openshift.io/plugins: '["crane-ui-plugin"]'
     operatorframework.io/suggested-namespace: openshift-migration
-  name: mtk-operator.v99.0.0
+  name: mtrho-operator.v99.0.0
+  namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -16,8 +17,8 @@ spec:
       kind: OperatorConfig
       name: operatorconfigs.crane.konveyor.io
       version: v1alpha1
-  description: OpenShift Crane Operator
-  displayName: OpenShift Crane
+  description: migration toolkit for Red Hat OpenShift
+  displayName: mtRHO
   icon:
   - base64data: ""
     mediatype: ""
@@ -35,13 +36,13 @@ spec:
   - supported: true
     type: AllNamespaces
   keywords:
-  - mtk
+  - mtrho
+  - MTRHO
   - crane
-  - MTK
   links:
-  - name: Mtk Operator
-    url: https://github.com/konveyor/mtk-operator
+  - name: Mtrho Operator
+    url: https://mtrho-operator.domain
   maturity: alpha
   provider:
-    name: RedHat
+    name: Red Hat
   version: 99.0.0

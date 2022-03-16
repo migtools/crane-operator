@@ -1,7 +1,7 @@
 # Build the manager binary
 FROM quay.io/konveyor/builder as builder
 
-WORKDIR /go/src/github.com/konveyor/mtk-operator
+WORKDIR /go/src/github.com/konveyor/mtrho-operator
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum

@@ -1,12 +1,4 @@
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: crane-proxy
-  namespace: openshift-migration
-data:
-  clusters: '[]'
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
