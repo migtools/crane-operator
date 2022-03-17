@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	cranev1alpha1 "github.com/konveyor/mtk-operator/api/v1alpha1"
-	"github.com/konveyor/mtk-operator/controllers"
+	cranev1alpha1 "github.com/konveyor/mtrho-operator/api/v1alpha1"
+	"github.com/konveyor/mtrho-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

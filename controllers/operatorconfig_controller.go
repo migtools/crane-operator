@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	cranev1alpha1 "github.com/konveyor/mtk-operator/api/v1alpha1"
+	cranev1alpha1 "github.com/konveyor/mtrho-operator/api/v1alpha1"
 )
 
 // OperatorConfigReconciler reconciles a OperatorConfig object
@@ -59,6 +59,7 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if err != nil {
 		log.Error(err, "Error creating cluster tasks")
+		return ctrl.Result{Requeue: true}, nil
 	} else {
 		log.Info("All the needed cluster task created")
 	}
@@ -67,6 +68,7 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if err != nil {
 		log.Error(err, "error configuring crane plugin")
+		return ctrl.Result{Requeue: true}, nil
 	} else {
 		log.Info("Crane ui plugin configured")
 	}
@@ -74,6 +76,7 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	err = configureProxy(ctx, log)
 	if err != nil {
 		log.Error(err, "error configuring proxy")
+		return ctrl.Result{Requeue: true}, nil
 	} else {
 		log.Info("Proxy Configured")
 	}

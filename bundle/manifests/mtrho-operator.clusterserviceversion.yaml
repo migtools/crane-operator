@@ -18,7 +18,8 @@ metadata:
     operatorframework.io/suggested-namespace: openshift-migration
     operators.operatorframework.io/builder: operator-sdk-v1.15.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: mtk-operator.v99.0.0
+  name: mtrho-operator.v99.0.0
+  namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -28,8 +29,8 @@ spec:
       kind: OperatorConfig
       name: operatorconfigs.crane.konveyor.io
       version: v1alpha1
-  description: OpenShift Crane Operator
-  displayName: OpenShift Crane
+  description: migration toolkit for Red Hat OpenShift
+  displayName: mtRHO
   icon:
   - base64data: ""
     mediatype: ""
@@ -87,7 +88,7 @@ spec:
           - patch
           - update
           - watch
-        serviceAccountName: mtk-operator-controller-manager
+        serviceAccountName: mtrho-operator-controller-manager
       - rules:
         - apiGroups:
           - ""
@@ -97,7 +98,7 @@ spec:
           - get
         serviceAccountName: proxy
       deployments:
-      - name: mtk-operator-controller-manager
+      - name: mtrho-operator-controller-manager
         spec:
           replicas: 1
           selector:
@@ -130,7 +131,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: quay.io/konveyor/crane-operator-container:0.0.1
+                image: quay.io/konveyor/mtrho-operator-container:0.0.1
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
@@ -156,7 +157,7 @@ spec:
                   allowPrivilegeEscalation: false
               securityContext:
                 runAsNonRoot: true
-              serviceAccountName: mtk-operator-controller-manager
+              serviceAccountName: mtrho-operator-controller-manager
               terminationGracePeriodSeconds: 10
       permissions:
       - rules:
@@ -227,7 +228,7 @@ spec:
           - patch
           - update
           - watch
-        serviceAccountName: mtk-operator-controller-manager
+        serviceAccountName: mtrho-operator-controller-manager
       - rules:
         - apiGroups:
           - ""
@@ -247,13 +248,13 @@ spec:
   - supported: true
     type: AllNamespaces
   keywords:
-  - mtk
+  - mtrho
+  - MTRHO
   - crane
-  - MTK
   links:
-  - name: Mtk Operator
-    url: https://github.com/konveyor/mtk-operator
+  - name: Mtrho Operator
+    url: https://mtrho-operator.domain
   maturity: alpha
   provider:
-    name: RedHat
+    name: Red Hat
   version: 99.0.0
