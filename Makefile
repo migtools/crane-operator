@@ -15,7 +15,7 @@ BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
 
 # CLUSTERTASK_SOURCE define the location from where kustomize will build all the needed cluster tasks
-CLUSTERTASK_SOURCE ?= github.com/konveyor/crane-runner/manifests/
+CLUSTERTASK_SOURCE ?= github.com/konveyor/crane-runner/config/clustertasks
 
 # CRANE_UI_PLUGIN_SOURCE points to raw github manifest file for crane-ui-plugin
 CRANE_UI_PLUGIN_SOURCE ?= https://raw.githubusercontent.com/konveyor/crane-ui-plugin/main/deploy.yaml
