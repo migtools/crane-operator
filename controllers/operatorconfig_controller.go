@@ -46,7 +46,7 @@ const (
 	InvalidNameConditionType = "InvalidName"
 )
 
-var filepaths = []string{"proxy.yaml", "crane-ui-plugin.yaml", "manifests.yaml"}
+var filepaths = []string{"proxy.yaml", "secret-service.yaml", "crane-ui-plugin.yaml", "manifests.yaml"}
 
 // OperatorConfigReconciler reconciles a OperatorConfig object
 type OperatorConfigReconciler struct {

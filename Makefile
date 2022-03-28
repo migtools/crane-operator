@@ -17,6 +17,9 @@ endif
 # CLUSTERTASK_SOURCE define the location from where kustomize will build all the needed cluster tasks
 CLUSTERTASK_SOURCE ?= github.com/konveyor/crane-runner/config/clustertasks
 
+# CRANE_SECRET_SERVICE_SOURCE defines the location for crane-secret-service manifests
+CRANE_SECRET_SERVICE_SOURCE ?= github.com/konveyor/crane-secret-service/config/default
+
 # CRANE_UI_PLUGIN_SOURCE points to raw github manifest file for crane-ui-plugin
 CRANE_UI_PLUGIN_SOURCE ?= https://raw.githubusercontent.com/konveyor/crane-ui-plugin/main/deploy.yaml
 
@@ -114,6 +117,10 @@ crane-ui-plugin:
 .PHONY: proxy
 proxy:
 	mkdir -p deploy/artifacts/ && touch deploy/artifacts/proxy.yaml | curl $(CRANE_PROXY_SOURCE) > deploy/artifacts/proxy.yaml
+
+.PHONY: secret-service
+secret-service:
+	mkdir -p deploy/artifacts/ && touch deploy/artifacts/secret-service.yaml | $(KUSTOMIZE) build $(CRANE_SECRET_SERVICE_SOURCE) > deploy/artifacts/secret-service.yaml
 ##@ Build
 
 .PHONY: build
@@ -148,7 +155,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 .PHONY: deploy
 deploy: manifests kustomize clustertasks ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image quay.io/konveyor/mtrho-operator-container=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy
@@ -185,10 +192,10 @@ rm -rf $$TMP_DIR ;\
 endef
 
 .PHONY: bundle
-bundle: manifests kustomize clustertasks crane-ui-plugin proxy ## Generate bundle manifests and metadata, then validate generated files.
+bundle: manifests kustomize clustertasks crane-ui-plugin proxy secret-service ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --extra-service-accounts proxy
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --extra-service-accounts proxy,secret-service
 	operator-sdk bundle validate ./bundle
 
 .PHONY: bundle-build

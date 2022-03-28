@@ -1,6 +1,6 @@
 apiVersion: crane.konveyor.io/v1alpha1
 kind: OperatorConfig
 metadata:
-  name: operatorconfig-sample
+  name: openshift-migration
 spec:
   # TODO(user): Add fields here
