@@ -131,7 +131,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: quay.io/konveyor/mtrho-operator-container:0.0.1
+                image: quay.io/konveyor/mtrho-operator-container:latest
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
