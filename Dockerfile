@@ -25,6 +25,7 @@ COPY --from=builder /go/src/manager .
 COPY deploy/artifacts/manifests.yaml manifests.yaml
 COPY deploy/artifacts/crane-ui-plugin.yaml crane-ui-plugin.yaml
 COPY deploy/artifacts/proxy.yaml proxy.yaml
+COPY deploy/artifacts/secret-service.yaml secret-service.yaml
 
 USER 65532:65532
 
