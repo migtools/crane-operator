@@ -229,10 +229,10 @@ func (r *OperatorConfigReconciler) reconcileDeployment(resource *unstructured.Un
 		}
 
 		deploy.Spec.Template = obj.Spec.Template
-		if len(obj.Labels) > 1 {
+		if len(obj.Labels) > 0 {
 			deploy.Labels = obj.Labels
 		}
-		if len(obj.Annotations) > 1 {
+		if len(obj.Annotations) > 0 {
 			deploy.Annotations = obj.Annotations
 		}
 		return nil
@@ -266,10 +266,10 @@ func (r *OperatorConfigReconciler) reconcileService(resource *unstructured.Unstr
 		}
 
 		service.Spec = obj.Spec
-		if len(obj.Labels) > 1 {
+		if len(obj.Labels) > 0 {
 			service.Labels = obj.Labels
 		}
-		if len(obj.Annotations) > 1 {
+		if len(obj.Annotations) > 0{
 			service.Annotations = obj.Annotations
 		}
 		return nil
@@ -299,10 +299,10 @@ func (r *OperatorConfigReconciler) reconcileConfigMap(resource *unstructured.Uns
 		}
 
 		configMap.Data = obj.Data
-		if len(obj.Labels) > 1 {
+		if len(obj.Labels) > 0 {
 			configMap.Labels = obj.Labels
 		}
-		if len(obj.Annotations) > 1 {
+		if len(obj.Annotations) > 0 {
 			configMap.Annotations = obj.Annotations
 		}
 		return nil
