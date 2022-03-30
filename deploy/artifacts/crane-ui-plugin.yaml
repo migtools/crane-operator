@@ -72,7 +72,7 @@ data:
         listen              9443 ssl;
         ssl_certificate     /var/serving-cert/tls.crt;
         ssl_certificate_key /var/serving-cert/tls.key;
-        root                /usr/share/nginx/html;
+        root                /opt/app-root/src;
       }
     }
 ---
