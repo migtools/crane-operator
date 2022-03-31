@@ -291,14 +291,6 @@ metadata:
     app: crane-runner
   name: crane-transform
 spec:
-  params:
-  - default: '[]'
-    description: |
-      Comma separated list of `flag-name=value` pairs. These flags with values
-      will be passed into all plugins that are executed in the transform
-      operation.
-    name: optional-flags
-    type: string
   steps:
   - image: quay.io/konveyor/crane-runner:latest
     name: crane-transform
@@ -306,7 +298,6 @@ spec:
       crane transform \
         --ignored-patches-dir="$(workspaces.ignored-patches.path)" \
         --flags-file="$(workspaces.craneconfig.path)" \
-        --optional-flags="$(params.optional-flags)" \
         --export-dir="$(workspaces.export.path)" \
         --transform-dir=$(workspaces.transform.path)
 
