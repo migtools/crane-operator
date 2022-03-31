@@ -21,7 +21,9 @@ oc apply -f https://raw.githubusercontent.com/konveyor/mtrho-operator/main/mtrho
 ```
 Then, using the console UI, from operator hub install the mtRHO Operator.
 
-*Note:* For now mtRHO and MTC are not compatible within a same namespace if installed using OLM and operator hub. 
+*Note:* 
+- For now mtRHO and MTC are not compatible within a same namespace if installed using OLM and operator hub. 
+- To interact with UI properly, before creating `operatorConfig` CR, run `oc create -f https://raw.githubusercontent.com/konveyor/crane-reverse-proxy/main/dev-route.yml`. This route is a workaround of a CORS issue we are facing, there is a patch to resolve the same upstream as well, once that gets released we would no longer need to create this route.
 
 ## Custom Installation
 
