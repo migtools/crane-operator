@@ -122,7 +122,7 @@ spec:
       export KUBECONFIG=$(workspaces.kubeconfig.path)/kubeconfig
 
       set +x
-      oc login --insecure-skip-tls-verify --server=$CLUSTER_URL --token=$CLUSTER_TOKEN
+      oc login --insecure-skip-tls-verify --token=$CLUSTER_TOKEN $CLUSTER_URL
       set -x
 
       kubectl config rename-context "$(kubectl config current-context)" "$(params.context-name)"
@@ -271,8 +271,8 @@ spec:
         --destination-context=$(params.dest-context) \
         --pvc-name $(params.source-pvc-name):$(params.dest-pvc-name) \
         --pvc-namespace $(params.source-namespace):$(params.dest-namespace) \
-        --dest-pvc-storage-class-name $(params.dest-storage-class-name) \
-        --pvc-requests-storage $(params.dest-pvc-capacity) \
+        --dest-storage-class $(params.dest-storage-class-name) \
+        --dest-storage-requests $(params.dest-pvc-capacity) \
         --endpoint $(params.endpoint-type)
   workspaces:
   - description: |
@@ -441,7 +441,11 @@ spec:
     image: quay.io/konveyor/crane-runner:latest
     name: kubectl-scale-down
     script: |
-      kubectl scale --context "$(params.context)" --namespace "$(params.namespace)" --replicas=0 "$(params.resource-type)" --all
+      #!/bin/bash
+      count=$(kubectl get --context "$(params.context)" "$(params.resource-type)" --namespace "$(params.namespace)" 2> /dev/null | wc -l)
+      if [ $count -ne "0" ]; then
+        kubectl scale --context "$(params.context)" --namespace "$(params.namespace)" --replicas=0 "$(params.resource-type)" --all;
+      fi
   workspaces:
   - description: |
       The kubeconfig for accessing the source cluster.
