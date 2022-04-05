@@ -1,4 +1,4 @@
-# Migration Toolkit for Red Hat Openshift Opeartor
+# Migration Toolkit for Red Hat Openshift Operator
 This operator is the entrypoint for installing the Migration Toolkit for Red Hat OpenShift (mtRHO).
 
 ## Compatibility
