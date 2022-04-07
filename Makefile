@@ -14,17 +14,6 @@ ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
 
-# CLUSTERTASK_SOURCE define the location from where kustomize will build all the needed cluster tasks
-CLUSTERTASK_SOURCE ?= github.com/konveyor/crane-runner/config/clustertasks
-
-# CRANE_SECRET_SERVICE_SOURCE defines the location for crane-secret-service manifests
-CRANE_SECRET_SERVICE_SOURCE ?= github.com/konveyor/crane-secret-service/config/default
-
-# CRANE_UI_PLUGIN_SOURCE points to raw github manifest file for crane-ui-plugin
-CRANE_UI_PLUGIN_SOURCE ?= https://raw.githubusercontent.com/konveyor/crane-ui-plugin/main/deploy.yaml
-
-CRANE_PROXY_SOURCE ?= https://raw.githubusercontent.com/konveyor/crane-reverse-proxy/main/deploy.yml
-
 # DEFAULT_CHANNEL defines the default channel used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g DEFAULT_CHANNEL = "stable")
 # To re-generate a bundle for any other default channel without changing the default setup, you can:
@@ -106,21 +95,6 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
-.PHONY: clustertasks
-clustertasks:
-	mkdir -p deploy/artifacts/ && touch deploy/artifacts/manifests.yaml | $(KUSTOMIZE) build $(CLUSTERTASK_SOURCE) > deploy/artifacts/manifests.yaml
-
-.PHONY: crane-ui-plugin
-crane-ui-plugin:
-	mkdir -p deploy/artifacts/ && touch deploy/artifacts/crane-ui-plugin.yaml | curl $(CRANE_UI_PLUGIN_SOURCE) > deploy/artifacts/crane-ui-plugin.yaml
-
-.PHONY: proxy
-proxy:
-	mkdir -p deploy/artifacts/ && touch deploy/artifacts/proxy.yaml | curl $(CRANE_PROXY_SOURCE) > deploy/artifacts/proxy.yaml
-
-.PHONY: secret-service
-secret-service:
-	mkdir -p deploy/artifacts/ && touch deploy/artifacts/secret-service.yaml | $(KUSTOMIZE) build $(CRANE_SECRET_SERVICE_SOURCE) > deploy/artifacts/secret-service.yaml
 ##@ Build
 
 .PHONY: build
@@ -133,7 +107,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build --pull -t ${IMG} .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -192,9 +166,9 @@ rm -rf $$TMP_DIR ;\
 endef
 
 .PHONY: bundle
-bundle: manifests kustomize clustertasks crane-ui-plugin proxy secret-service ## Generate bundle manifests and metadata, then validate generated files.
+bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd config/manager && $(KUSTOMIZE) edit set image quay.io/konveyor/mtrho-operator-container=${IMG}
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --extra-service-accounts proxy,secret-service
 	operator-sdk bundle validate ./bundle
 
