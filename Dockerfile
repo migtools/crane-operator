@@ -1,3 +1,8 @@
+FROM quay.io/konveyor/crane-reverse-proxy:latest as crane-reverse-proxy
+FROM quay.io/konveyor/crane-secret-service:latest as crane-secret-service
+FROM quay.io/konveyor/crane-ui-plugin:latest as crane-ui-plugin
+FROM quay.io/konveyor/crane-runner:latest as crane-runner
+
 # Build the manager binary
 FROM quay.io/konveyor/builder as builder
 
@@ -22,10 +27,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /go/src/manager main.go
 FROM registry.access.redhat.com/ubi8-minimal
 WORKDIR /
 COPY --from=builder /go/src/manager .
-COPY deploy/artifacts/manifests.yaml manifests.yaml
-COPY deploy/artifacts/crane-ui-plugin.yaml crane-ui-plugin.yaml
-COPY deploy/artifacts/proxy.yaml proxy.yaml
-COPY deploy/artifacts/secret-service.yaml secret-service.yaml
+COPY --from=crane-reverse-proxy /deploy.yaml crane-reverse-proxy.yaml
+COPY --from=crane-secret-service /deploy.yaml crane-secret-service.yaml
+COPY --from=crane-ui-plugin /deploy.yaml crane-ui-plugin.yaml
+COPY --from=crane-runner /deploy.yaml crane-runner.yaml
 
 USER 65532:65532
 

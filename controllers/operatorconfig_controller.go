@@ -46,7 +46,7 @@ const (
 	InvalidNameConditionType = "InvalidName"
 )
 
-var filepaths = []string{"proxy.yaml", "secret-service.yaml", "crane-ui-plugin.yaml", "manifests.yaml"}
+var filepaths = []string{"crane-reverse-proxy.yaml", "crane-secret-service.yaml", "crane-ui-plugin.yaml", "crane-runner.yaml"}
 
 // OperatorConfigReconciler reconciles a OperatorConfig object
 type OperatorConfigReconciler struct {
@@ -269,7 +269,7 @@ func (r *OperatorConfigReconciler) reconcileService(resource *unstructured.Unstr
 		if len(obj.Labels) > 0 {
 			service.Labels = obj.Labels
 		}
-		if len(obj.Annotations) > 0{
+		if len(obj.Annotations) > 0 {
 			service.Annotations = obj.Annotations
 		}
 		return nil
