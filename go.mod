@@ -101,3 +101,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+// CVE-2021-41190
+replace github.com/opencontainers/image-spec => github.com/opencontainers/image-spec v1.0.2
