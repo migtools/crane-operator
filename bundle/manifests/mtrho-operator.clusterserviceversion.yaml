@@ -16,7 +16,7 @@ metadata:
     capabilities: Basic Install
     console.openshift.io/plugins: '["crane-ui-plugin"]'
     operatorframework.io/suggested-namespace: openshift-migration
-    operators.operatorframework.io/builder: operator-sdk-v1.15.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.14.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: mtrho-operator.v99.0.0
   namespace: placeholder
@@ -131,7 +131,16 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: quay.io/konveyor/mtrho-operator-container:latest
+                env:
+                - name: CRANE_RUNNER_IMAGE
+                  value: quay.io/konveyor/crane-runner:latest
+                - name: CRANE_UI_PLUGIN_IMAGE
+                  value: quay.io/konveyor/crane-ui-plugin:latest
+                - name: CRANE_REVERSE_PROXY_IMAGE
+                  value: quay.io/konveyor/crane-reverse-proxy:latest
+                - name: CRANE_SECRET_SERVICE_IMAGE
+                  value: quay.io/konveyor/crane-secret-service:latest
+                image: quay.io/konveyor/mtrho-operator:latest
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
@@ -257,4 +266,13 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
+  relatedImages:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: crane-runner
+  - image: quay.io/konveyor/crane-ui-plugin:latest
+    name: crane-ui-plugin
+  - image: quay.io/konveyor/crane-secret-service:latest
+    name: crane-secret-service
+  - image: quay.io/konveyor/crane-reverse-proxy:latest
+    name: crane-reverse-proxy
   version: 99.0.0

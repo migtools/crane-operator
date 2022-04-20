@@ -34,6 +34,15 @@ spec:
         image: quay.io/konveyor/mtrho-operator-container:latest
         imagePullPolicy: Always
         name: manager
+        env:
+          - name: CRANE_RUNNER_IMAGE
+            value: quay.io/konveyor/crane-runner:latest
+          - name: CRANE_UI_PLUGIN_IMAGE
+            value: quay.io/konveyor/crane-ui-plugin:latest
+          - name: CRANE_REVERSE_PROXY_IMAGE
+            value: quay.io/konveyor/crane-reverse-proxy:latest
+          - name: CRANE_SECRET_SERVICE_IMAGE
+            value: quay.io/konveyor/crane-secret-service:latest
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
