@@ -46,7 +46,33 @@ const (
 	InvalidNameConditionType = "InvalidName"
 )
 
-var filepaths = []string{"crane-reverse-proxy.yaml", "crane-secret-service.yaml", "crane-ui-plugin.yaml", "crane-runner.yaml"}
+// An operand, we are defining as:
+// 1. the path to the manifest to deploy the operand
+// 2. the operands image
+type operand struct {
+	path    string
+	imageFn ImageFunction
+}
+
+// operands is the set of components being managed by this operator
+var operands = []operand{
+	{
+		path:    "crane-reverse-proxy.yaml",
+		imageFn: CraneReverseProxyImage,
+	},
+	{
+		path:    "crane-secret-service.yaml",
+		imageFn: CraneSecretServiceImage,
+	},
+	{
+		path:    "crane-ui-plugin.yaml",
+		imageFn: CraneUIPluginImage,
+	},
+	{
+		path:    "crane-runner.yaml",
+		imageFn: CraneRunnerImage,
+	},
+}
 
 // OperatorConfigReconciler reconciles a OperatorConfig object
 type OperatorConfigReconciler struct {
@@ -150,8 +176,8 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	for _, f := range filepaths {
-		err := r.reconcileResourcesFromFile(f, ctx, log, operatorConfig)
+	for _, o := range operands {
+		err := r.reconcileOperand(o, ctx, log, operatorConfig)
 		if err != nil {
 			log.Error(err, "Error creating resources")
 			return ctrl.Result{Requeue: true}, nil
@@ -162,8 +188,8 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 func (r *OperatorConfigReconciler) cleanUpResources(ctx context.Context) error {
-	for _, f := range filepaths {
-		err := r.deleteResourcesFromFile(f, ctx)
+	for _, o := range operands {
+		err := r.deleteOperand(o, ctx)
 		if err != nil {
 			return err
 		}
@@ -172,14 +198,14 @@ func (r *OperatorConfigReconciler) cleanUpResources(ctx context.Context) error {
 	return nil
 }
 
-func (r *OperatorConfigReconciler) reconcileResourcesFromFile(path string, ctx context.Context, log logr.Logger, operatorConfig *cranev1alpha1.OperatorConfig) error {
+func (r *OperatorConfigReconciler) reconcileOperand(o operand, ctx context.Context, log logr.Logger, operatorConfig *cranev1alpha1.OperatorConfig) error {
 	var decoder = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	data, err := getResources(path)
+	data, err := getResources(o.path)
 	if err != nil {
 		return err
 	}
 
-	reconcilersForGVK := map[string]func(resource *unstructured.Unstructured, ctx context.Context, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error{
+	reconcilersForGVK := map[string]func(resource *unstructured.Unstructured, ctx context.Context, imageFn ImageFunction, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error{
 		"Deployment":    r.reconcileDeployment,
 		"Service":       r.reconcileService,
 		"ConfigMap":     r.reconcileConfigMap,
@@ -196,7 +222,7 @@ func (r *OperatorConfigReconciler) reconcileResourcesFromFile(path string, ctx c
 			}
 
 			if reconcile, ok := reconcilersForGVK[gvk.Kind]; ok {
-				err := reconcile(&obj, ctx, log, operatorConfig)
+				err := reconcile(&obj, ctx, o.imageFn, log, operatorConfig)
 				if err != nil {
 					return err
 				}
@@ -209,7 +235,7 @@ func (r *OperatorConfigReconciler) reconcileResourcesFromFile(path string, ctx c
 	return nil
 }
 
-func (r *OperatorConfigReconciler) reconcileDeployment(resource *unstructured.Unstructured, ctx context.Context, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
+func (r *OperatorConfigReconciler) reconcileDeployment(resource *unstructured.Unstructured, ctx context.Context, imageFn ImageFunction, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
 	var obj appsv1.Deployment
 	err := runtime.DefaultUnstructuredConverter.
 		FromUnstructured(resource.UnstructuredContent(), &obj)
@@ -235,6 +261,13 @@ func (r *OperatorConfigReconciler) reconcileDeployment(resource *unstructured.Un
 		if len(obj.Annotations) > 0 {
 			deploy.Annotations = obj.Annotations
 		}
+
+		// Override each of the images in the deployment spec.
+		// If, in the future, we have multiple image in a single component we will
+		// need a new approach.
+		for _, container := range deploy.Spec.Template.Spec.Containers {
+			container.Image = imageFn()
+		}
 		return nil
 	})
 	if err != nil {
@@ -246,7 +279,7 @@ func (r *OperatorConfigReconciler) reconcileDeployment(resource *unstructured.Un
 	return nil
 }
 
-func (r *OperatorConfigReconciler) reconcileService(resource *unstructured.Unstructured, ctx context.Context, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
+func (r *OperatorConfigReconciler) reconcileService(resource *unstructured.Unstructured, ctx context.Context, imageFn ImageFunction, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
 	var obj corev1.Service
 	err := runtime.DefaultUnstructuredConverter.
 		FromUnstructured(resource.UnstructuredContent(), &obj)
@@ -283,7 +316,7 @@ func (r *OperatorConfigReconciler) reconcileService(resource *unstructured.Unstr
 	return nil
 }
 
-func (r *OperatorConfigReconciler) reconcileConfigMap(resource *unstructured.Unstructured, ctx context.Context, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
+func (r *OperatorConfigReconciler) reconcileConfigMap(resource *unstructured.Unstructured, ctx context.Context, imageFn ImageFunction, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
 	var obj corev1.ConfigMap
 	err := runtime.DefaultUnstructuredConverter.
 		FromUnstructured(resource.UnstructuredContent(), &obj)
@@ -316,7 +349,7 @@ func (r *OperatorConfigReconciler) reconcileConfigMap(resource *unstructured.Uns
 	return nil
 }
 
-func (r *OperatorConfigReconciler) reconcileClusterTask(resource *unstructured.Unstructured, ctx context.Context, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
+func (r *OperatorConfigReconciler) reconcileClusterTask(resource *unstructured.Unstructured, ctx context.Context, imageFn ImageFunction, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
 	var obj pipelinev1beta1.ClusterTask
 	err := runtime.DefaultUnstructuredConverter.
 		FromUnstructured(resource.UnstructuredContent(), &obj)
@@ -338,6 +371,10 @@ func (r *OperatorConfigReconciler) reconcileClusterTask(resource *unstructured.U
 		if len(obj.Annotations) > 0 {
 			clusterTask.Annotations = obj.Annotations
 		}
+
+		for _, step := range clusterTask.Spec.Steps {
+			step.Image = imageFn()
+		}
 		return nil
 	})
 	if err != nil {
@@ -349,7 +386,7 @@ func (r *OperatorConfigReconciler) reconcileClusterTask(resource *unstructured.U
 	return nil
 }
 
-func (r *OperatorConfigReconciler) reconcileConsolePlugin(resource *unstructured.Unstructured, ctx context.Context, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
+func (r *OperatorConfigReconciler) reconcileConsolePlugin(resource *unstructured.Unstructured, ctx context.Context, imageFn ImageFunction, log logr.Logger, oc *cranev1alpha1.OperatorConfig) error {
 	var obj consolev1alpha1.ConsolePlugin
 	err := runtime.DefaultUnstructuredConverter.
 		FromUnstructured(resource.UnstructuredContent(), &obj)
@@ -382,9 +419,9 @@ func (r *OperatorConfigReconciler) reconcileConsolePlugin(resource *unstructured
 	return nil
 }
 
-func (r *OperatorConfigReconciler) deleteResourcesFromFile(path string, ctx context.Context) error {
+func (r *OperatorConfigReconciler) deleteOperand(o operand, ctx context.Context) error {
 	var decoder = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	data, err := getResources(path)
+	data, err := getResources(o.path)
 	if err != nil {
 		return err
 	}
