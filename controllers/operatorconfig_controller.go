@@ -265,8 +265,8 @@ func (r *OperatorConfigReconciler) reconcileDeployment(resource *unstructured.Un
 		// Override each of the images in the deployment spec.
 		// If, in the future, we have multiple image in a single component we will
 		// need a new approach.
-		for _, container := range deploy.Spec.Template.Spec.Containers {
-			container.Image = imageFn()
+		for i := range deploy.Spec.Template.Spec.Containers {
+			deploy.Spec.Template.Spec.Containers[i].Image = imageFn()
 		}
 		return nil
 	})
@@ -372,8 +372,8 @@ func (r *OperatorConfigReconciler) reconcileClusterTask(resource *unstructured.U
 			clusterTask.Annotations = obj.Annotations
 		}
 
-		for _, step := range clusterTask.Spec.Steps {
-			step.Image = imageFn()
+		for i := range clusterTask.Spec.Steps {
+			clusterTask.Spec.Steps[i].Image = imageFn()
 		}
 		return nil
 	})
