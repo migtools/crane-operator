@@ -140,7 +140,7 @@ spec:
                   value: quay.io/konveyor/crane-reverse-proxy:latest
                 - name: CRANE_SECRET_SERVICE_IMAGE
                   value: quay.io/konveyor/crane-secret-service:latest
-                image: quay.io/konveyor/mtrho-operator:latest
+                image: quay.io/konveyor/mtrho-operator-container:latest
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
