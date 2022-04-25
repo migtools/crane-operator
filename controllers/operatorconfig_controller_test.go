@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+var imageFn ImageFunction = func() string { return "busybox" }
+
 var _ = Describe("Operator Config", func() {
 	var deploy *appsv1.Deployment
 	var deplSpec appsv1.DeploymentSpec
@@ -82,7 +84,7 @@ var _ = Describe("Operator Config", func() {
 
 		un := unstructured.Unstructured{Object: tmp}
 		Expect(err).NotTo(HaveOccurred())
-		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), log.FromContext(context.TODO()), oc)
+		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), imageFn, log.FromContext(context.TODO()), oc)
 
 		By("returning no error")
 		Expect(err).NotTo(HaveOccurred())
@@ -105,7 +107,7 @@ var _ = Describe("Operator Config", func() {
 
 		un := unstructured.Unstructured{Object: tmp}
 		Expect(err).NotTo(HaveOccurred())
-		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), log.FromContext(context.TODO()), oc)
+		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), imageFn, log.FromContext(context.TODO()), oc)
 		By("returning no error")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -127,7 +129,7 @@ var _ = Describe("Operator Config", func() {
 
 		un = unstructured.Unstructured{Object: tmp}
 		Expect(err).NotTo(HaveOccurred())
-		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), log.FromContext(context.TODO()), oc)
+		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), imageFn, log.FromContext(context.TODO()), oc)
 
 		By("returning no error")
 		Expect(err).NotTo(HaveOccurred())
@@ -148,7 +150,7 @@ var _ = Describe("Operator Config", func() {
 
 		un := unstructured.Unstructured{Object: tmp}
 		Expect(err).NotTo(HaveOccurred())
-		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), log.FromContext(context.TODO()), oc)
+		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), imageFn, log.FromContext(context.TODO()), oc)
 		By("returning no error")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -162,7 +164,7 @@ var _ = Describe("Operator Config", func() {
 		un = unstructured.Unstructured{Object: tmp}
 		Expect(err).NotTo(HaveOccurred())
 
-		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), log.FromContext(context.TODO()), oc)
+		err = r.reconcileDeployment(un.DeepCopy(), context.TODO(), imageFn, log.FromContext(context.TODO()), oc)
 		By("returning no error")
 		Expect(err).NotTo(HaveOccurred())
 
