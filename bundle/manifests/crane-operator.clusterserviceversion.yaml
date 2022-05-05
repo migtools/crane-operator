@@ -18,7 +18,7 @@ metadata:
     operatorframework.io/suggested-namespace: openshift-migration
     operators.operatorframework.io/builder: operator-sdk-v1.15.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: mtrho-operator.v99.0.0
+  name: crane-operator.v99.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -30,7 +30,7 @@ spec:
       name: operatorconfigs.crane.konveyor.io
       version: v1alpha1
   description: migration toolkit for Red Hat OpenShift
-  displayName: mtRHO
+  displayName: crane
   icon:
   - base64data: ""
     mediatype: ""
@@ -88,7 +88,7 @@ spec:
           - patch
           - update
           - watch
-        serviceAccountName: mtrho-operator-controller-manager
+        serviceAccountName: crane-operator-controller-manager
       - rules:
         - apiGroups:
           - ""
@@ -98,7 +98,7 @@ spec:
           - get
         serviceAccountName: proxy
       deployments:
-      - name: mtrho-operator-controller-manager
+      - name: crane-operator-controller-manager
         spec:
           replicas: 1
           selector:
@@ -140,7 +140,7 @@ spec:
                   value: quay.io/konveyor/crane-reverse-proxy:latest
                 - name: CRANE_SECRET_SERVICE_IMAGE
                   value: quay.io/konveyor/crane-secret-service:latest
-                image: quay.io/konveyor/mtrho-operator-container:latest
+                image: quay.io/jgabani/crane-operator-container:latest
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
@@ -166,7 +166,7 @@ spec:
                   allowPrivilegeEscalation: false
               securityContext:
                 runAsNonRoot: true
-              serviceAccountName: mtrho-operator-controller-manager
+              serviceAccountName: crane-operator-controller-manager
               terminationGracePeriodSeconds: 10
       permissions:
       - rules:
@@ -237,7 +237,7 @@ spec:
           - patch
           - update
           - watch
-        serviceAccountName: mtrho-operator-controller-manager
+        serviceAccountName: crane-operator-controller-manager
       - rules:
         - apiGroups:
           - ""
@@ -257,12 +257,10 @@ spec:
   - supported: true
     type: AllNamespaces
   keywords:
-  - mtrho
-  - MTRHO
   - crane
   links:
-  - name: Mtrho Operator
-    url: https://mtrho-operator.domain
+  - name: crane Operator
+    url: https://crane-operator.domain
   maturity: alpha
   provider:
     name: Red Hat

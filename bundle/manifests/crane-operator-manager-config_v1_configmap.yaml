@@ -14,4 +14,4 @@ data:
       resourceName: f8cd9b79.konveyor.io
 kind: ConfigMap
 metadata:
-  name: mtrho-operator-manager-config
+  name: crane-operator-manager-config

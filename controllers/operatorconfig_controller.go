@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	cranev1alpha1 "github.com/konveyor/mtrho-operator/api/v1alpha1"
+	cranev1alpha1 "github.com/konveyor/crane-operator/api/v1alpha1"
 	consolev1alpha1 "github.com/openshift/api/console/v1alpha1"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"

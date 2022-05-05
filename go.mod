@@ -1,4 +1,4 @@
-module github.com/konveyor/mtrho-operator
+module github.com/konveyor/crane-operator
 
 go 1.18
 

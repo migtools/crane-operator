@@ -1,8 +1,8 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: mtrho
+  name: crane
   namespace: openshift-marketplace
 spec:
   sourceType: grpc
-  image: quay.io/konveyor/mtrho-operator-index:latest
+  image: quay.io/konveyor/crane-operator-index:latest

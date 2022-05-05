@@ -28,8 +28,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# konveyor.io/mtrho-operator-bundle:$VERSION and konveyor.io/mtrho-operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= quay.io/konveyor/mtrho-operator
+# konveyor.io/crane-operator-bundle:$VERSION and konveyor.io/crane-operator-catalog:$VERSION.
+IMAGE_TAG_BASE ?= quay.io/konveyor/crane-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -129,7 +129,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 .PHONY: deploy
 deploy: manifests kustomize clustertasks ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image quay.io/konveyor/mtrho-operator-container=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image quay.io/konveyor/crane-operator-container=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy
@@ -168,7 +168,7 @@ endef
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image quay.io/konveyor/mtrho-operator-container=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image quay.io/konveyor/crane-operator-container=${IMG}
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --extra-service-accounts proxy,secret-service
 	operator-sdk bundle validate ./bundle
 
