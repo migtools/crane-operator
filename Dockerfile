@@ -6,7 +6,7 @@ FROM quay.io/konveyor/crane-runner:latest as crane-runner
 # Build the manager binary
 FROM quay.io/konveyor/builder as builder
 
-WORKDIR /go/src/github.com/konveyor/mtrho-operator
+WORKDIR /go/src/github.com/konveyor/crane-operator
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum

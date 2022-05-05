@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"reflect"
 
-	cranev1alpha1 "github.com/konveyor/mtrho-operator/api/v1alpha1"
+	cranev1alpha1 "github.com/konveyor/crane-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"

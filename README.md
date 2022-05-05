@@ -1,28 +1,29 @@
 # Migration Toolkit for Red Hat OpenShift Operator
-This operator is the entrypoint for installing the Migration Toolkit for Red Hat OpenShift (mtRHO).
+This operator is the entrypoint for installing the Migration Toolkit for Red Hat OpenShift (crane).
 
 ## Compatibility
 
 *Note:*
-- mtRHO is compatible with OpenShift 4.10.7/4.10.7+ versions.
+- crane is compatible with OpenShift 4.10.7/4.10.7+ versions.
 - Go 1.18 version needed to build operator
 
-## Prerequisites
+## Dependencies
 
-1. Install pipeline operator. [Here](https://docs.openshift.com/container-platform/4.10/cicd/pipelines/installing-pipelines.html) are the steps to install pipeline operator.
+1. Crane installs pipeline operator as dependency in `<installation>` namespace. (**Note:** This will not impact any existing installation of the pipeline operator. Uninstalling mtRHO later also will not impact the pipeline operator.)
 2. Make sure `ClusterTask`, `Pipeline` CRDs are available after the installation of Pipeline operator. It might take a minute or two before the CRDs appear.
 
 ## Default Installation
 
-Making the mtrho-operator available in your cluster is as simple as creating the CatalogSource:
+Making the crane-operator available in your cluster is as simple as creating the CatalogSource:
 
 ```
-oc apply -f https://raw.githubusercontent.com/konveyor/mtrho-operator/main/mtrho-catalogsource.yaml
+oc apply -f https://raw.githubusercontent.com/konveyor/crane-operator/main/crane-catalogsource.yaml
 ```
-Then, using the console UI, from operator hub install the mtRHO Operator.
+Then, using the console UI, from operator hub install the crane Operator.
 
 *Note:* 
-- For now mtRHO and MTC are not compatible within a same namespace if installed using OLM and operator hub. 
+- For now crane and MTC are not compatible within a same namespace if installed using OLM and operator hub. 
+- To interact with UI properly, before creating `operatorConfig` CR, run `oc create -f https://raw.githubusercontent.com/konveyor/crane-reverse-proxy/main/dev-route.yml`. This route is a workaround of a CORS issue we are facing, there is a patch to resolve the same upstream as well, once that gets released we would no longer need to create this route.
 
 ## Custom Installation
 
@@ -35,14 +36,14 @@ To build images from the latest code use the below instructions.
     ```shell script
     export ORG=your-quay-org
     export VERSION=99.0.0
-    export IMAGE_TAG_BASE=quay.io/$ORG/mtrho-operator
+    export IMAGE_TAG_BASE=quay.io/$ORG/crane-operator
     ```
 
-2. Run from the root of the mtrho-operator repo to build container image and push it.
+2. Run from the root of the crane-operator repo to build container image and push it.
 
     ```shell script
-    docker build -f Dockerfile -t quay.io/$ORG/mtrho-operator-container:$VERSION .
-    docker push  quay.io/$ORG/mtrho-operator-container:$VERSION
+    docker build -f Dockerfile -t quay.io/$ORG/crane-operator-container:$VERSION .
+    docker push  quay.io/$ORG/crane-operator-container:$VERSION
     ```
    
 3. Update `/config/manager/manager.yaml` to use your own custom image for container.
@@ -54,21 +55,21 @@ To build images from the latest code use the below instructions.
            - /manager
            args:
            - --leader-elect
-           image: quay.io/$ORG/mtrho-operator-container:$VERSION
+           image: quay.io/$ORG/crane-operator-container:$VERSION
            imagePullPolicy: Always
            name: manager
     ```
     
-4. Run from the root of mtrho-operator repo to build operator bundle.
+4. Run from the root of crane-operator repo to build operator bundle.
     ```shell script
     make bundle
     make bundle-build
     make bundle-push
    ```
-5. Run from the root of mtrho-operator repo to build operator index.
+5. Run from the root of crane-operator repo to build operator index.
    ```
-    opm index add --container-tool podman --bundles quay.io/$ORG/mtrho-operator-bundle:v$VERSION --tag quay.io/$ORG/mtrho-operator-index:v$VERSION
-    podman push quay.io/$ORG/mtrho-operator-index:v$VERSION
+    opm index add --container-tool podman --bundles quay.io/$ORG/crane-operator-bundle:v$VERSION --tag quay.io/$ORG/crane-operator-index:v$VERSION
+    podman push quay.io/$ORG/crane-operator-index:v$VERSION
     ```
 
 *Note:* Make sure your quay repos are public
@@ -82,17 +83,17 @@ To build images from the latest code use the below instructions.
     apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource
     metadata:
-      name: mtrho-operator
+      name: crane-operator
       namespace: openshift-marketplace
     spec:
-      image: 'quay.io/$ORG/mtrho-operator-index:v$VERSION'
+      image: 'quay.io/$ORG/crane-operator-index:v$VERSION'
       sourceType: grpc
     EOF
     
     oc create -f catalogsource.yaml
     ```
 
-2. Install mtRHO operator from operator hub, choose to enable console plugin while installing operator
+2. Install crane operator from operator hub, choose to enable console plugin while installing operator
 3. Create operatorConfig CR to initiate installation of proxy, crane-ui-plugin, and cluster tasks needed for migration
     ```shell script
     cat << EOF > openshift-migration.yaml

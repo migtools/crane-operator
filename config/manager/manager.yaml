@@ -31,7 +31,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: quay.io/konveyor/mtrho-operator-container:latest
+        image: quay.io/konveyor/crane-operator-container:latest
         imagePullPolicy: Always
         name: manager
         env:
