@@ -63,7 +63,7 @@ kind: Role
 metadata:
   creationTimestamp: null
   name: manager-role
-  namespace: openshift-migration
+  namespace: openshift-migration-toolkit
 rules:
 - apiGroups:
   - ""

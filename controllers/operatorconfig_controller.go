@@ -42,7 +42,7 @@ import (
 
 const (
 	Finalizer                = "openshift.konveyor.crane"
-	OwnerConfigName          = "openshift-migration"
+	OwnerConfigName          = "openshift-migration-toolkit"
 	InvalidNameConditionType = "InvalidName"
 )
 
@@ -80,15 +80,15 @@ type OperatorConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// rbac.authorization.k8s.io permissions are needed to create namespace limited role and rolebinding to create deployment and service within openshift-migration
+// rbac.authorization.k8s.io permissions are needed to create namespace limited role and rolebinding to create deployment and service within openshift-migration-toolkit
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=crane.konveyor.io,resources=operatorconfigs/finalizers,verbs=update
 //+kubebuilder:rbac:groups=tekton.dev,resources=clustertasks,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="apps",namespace=openshift-migration,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="apps",namespace=openshift-migration-toolkit,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=console.openshift.io,resources=consoleplugins,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",namespace=openshift-migration,resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=route.openshift.io,namespace=openshift-migration,resources=routes,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",namespace=openshift-migration-toolkit,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=route.openshift.io,namespace=openshift-migration-toolkit,resources=routes,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

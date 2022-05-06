@@ -1,5 +1,5 @@
 package controllers
 
 const (
-	InstallNamespace = "openshift-migration"
+	InstallNamespace = "openshift-migration-toolkit"
 )
