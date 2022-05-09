@@ -4,7 +4,7 @@ This operator is the entrypoint for installing the Migration Toolkit for Red Hat
 ## Compatibility
 
 *Note:*
-- crane is compatible with OpenShift 4.10.7/4.10.7+ versions.
+- crane is compatible with OpenShift 4.10.11/4.10.11+ versions.
 - Go 1.18 version needed to build operator
 
 ## Dependencies
@@ -23,7 +23,6 @@ Then, using the console UI, from operator hub install the crane Operator.
 
 *Note:* 
 - For now crane and MTC are not compatible within a same namespace if installed using OLM and operator hub. 
-- To interact with UI properly, before creating `operatorConfig` CR, run `oc create -f https://raw.githubusercontent.com/konveyor/crane-reverse-proxy/main/dev-route.yml`. This route is a workaround of a CORS issue we are facing, there is a patch to resolve the same upstream as well, once that gets released we would no longer need to create this route.
 
 ## Custom Installation
 
