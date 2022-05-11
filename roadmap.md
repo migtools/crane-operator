@@ -11,3 +11,5 @@ MTRHO 1.0 is currently scheduled for MID-2022
 |---|---|---|
 | Remote cluster import wizard | [MIG-1163](https://issues.redhat.com/browse/MIG-1163) | MTRHO 1.0 |
 | Importing from DEV Sandbox (trial) | [MIG-1167](https://issues.redhat.com/browse/MIG-1167) | MTRHO 1.0 |
+| Staging to reduce migration downtime | [MIG-1194](https://issues.redhat.com/browse/MIG-1194) | MTRHO 1.0 |
+
