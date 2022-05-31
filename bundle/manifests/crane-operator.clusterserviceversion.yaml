@@ -14,10 +14,15 @@ metadata:
         }
       ]
     capabilities: Basic Install
+    certified: "false"
+    containerImage: quay.io/konveyor/crane-operator-container:latest
+    createdAt: 2022-05-31T05:33:00Z
     console.openshift.io/plugins: '["crane-ui-plugin"]'
     operatorframework.io/suggested-namespace: openshift-migration-toolkit
     operators.operatorframework.io/builder: operator-sdk-v1.15.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+    repository: https://github.com/konveyor/crane-operator
+    support: Red Hat
   name: crane-operator.v99.0.0
   namespace: placeholder
 spec:
@@ -29,7 +34,12 @@ spec:
       kind: OperatorConfig
       name: operatorconfigs.crane.konveyor.io
       version: v1alpha1
-  description: migration toolkit for Red Hat OpenShift
+  description: |
+    Migration Toolkit for Red Hat OpenShift
+
+    Crane is a migration tool under the Konveyor community that helps application owners migrate Kubernetes workloads and their state between clusters.
+
+    If you experience any issues or have feature requests, please file an [issue](https://github.com/konveyor/crane-operator/issues)
   displayName: crane
   icon:
   - base64data: ""
