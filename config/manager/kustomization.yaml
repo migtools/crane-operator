@@ -15,5 +15,5 @@ images:
   newName: controller
   newTag: latest
 - name: quay.io/konveyor/crane-operator-container
-  newName: quay.io/jgabani/crane-operator-container
+  newName: quay.io/konveyor/crane-operator-container
   newTag: latest
