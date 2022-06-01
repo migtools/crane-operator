@@ -8,7 +8,7 @@ metadata:
           "apiVersion": "crane.konveyor.io/v1alpha1",
           "kind": "OperatorConfig",
           "metadata": {
-            "name": "openshift-migration"
+            "name": "openshift-migration-toolkit"
           },
           "spec": null
         }
