@@ -269,8 +269,8 @@ spec:
   keywords:
   - crane
   links:
-  - name: crane Operator
-    url: https://crane-operator.domain
+  - name: Crane Operator
+    url: https://github.com/konveyor/crane-operator
   maturity: alpha
   provider:
     name: Red Hat
