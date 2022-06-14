@@ -41,9 +41,20 @@ import (
 )
 
 const (
-	Finalizer                = "openshift.konveyor.crane"
-	OwnerConfigName          = "openshift-migration-toolkit"
-	InvalidNameConditionType = "InvalidName"
+	Finalizer       = "openshift.konveyor.crane"
+	OwnerConfigName = "openshift-migration-toolkit"
+)
+
+// Condition types
+const (
+	ReconcileCompleted = "ReconcileCompleted"
+)
+
+// Reasons
+const (
+	InvalidName            = "InvalidName"
+	ReconcileComplete      = "ReconcileComplete"
+	ErrorCreatingResources = "ErrorCreatingResources"
 )
 
 // An operand, we are defining as:
@@ -120,34 +131,19 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		reason := fmt.Sprintf("Invalid name (%s)", operatorConfig.Name)
 		msg := fmt.Sprintf("Only one OperatorConfig supported per cluster and must be named '%s'", OwnerConfigName)
 		log.Info(fmt.Sprintf("%s: %s", reason, msg))
-		if meta.FindStatusCondition(operatorConfig.Status.Conditions, InvalidNameConditionType) == nil {
-			meta.SetStatusCondition(&operatorConfig.Status.Conditions, metav1.Condition{
-				Type:               InvalidNameConditionType,
-				Status:             metav1.ConditionTrue,
-				Reason:             "NonStandardNameConfigured",
-				Message:            fmt.Sprintf("%s: %s", reason, msg),
-				LastTransitionTime: metav1.Time{Time: time.Now()},
-			})
-			err := r.Status().Update(ctx, operatorConfig)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		return ctrl.Result{}, nil
-	}
-
-	if meta.FindStatusCondition(operatorConfig.Status.Conditions, InvalidNameConditionType) == nil {
 		meta.SetStatusCondition(&operatorConfig.Status.Conditions, metav1.Condition{
-			Type:               InvalidNameConditionType,
+			Type:               ReconcileCompleted,
 			Status:             metav1.ConditionFalse,
-			Reason:             "StandardNameFound",
-			Message:            fmt.Sprintf("Valid name (%s)", operatorConfig.Name),
+			Reason:             InvalidName,
+			Message:            fmt.Sprintf("%s: %s", reason, msg),
 			LastTransitionTime: metav1.Time{Time: time.Now()},
 		})
 		err := r.Status().Update(ctx, operatorConfig)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+
+		return ctrl.Result{}, nil
 	}
 
 	// Add Finalizer for this CR
@@ -180,8 +176,31 @@ func (r *OperatorConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		err := r.reconcileOperand(o, ctx, log, operatorConfig)
 		if err != nil {
 			log.Error(err, "Error creating resources")
+			meta.SetStatusCondition(&operatorConfig.Status.Conditions, metav1.Condition{
+				Type:               ReconcileCompleted,
+				Status:             metav1.ConditionFalse,
+				Reason:             ErrorCreatingResources,
+				Message:            fmt.Sprintf("%s", err.Error()),
+				LastTransitionTime: metav1.Time{Time: time.Now()},
+			})
+			err := r.Status().Update(ctx, operatorConfig)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{Requeue: true}, nil
 		}
+	}
+
+	meta.SetStatusCondition(&operatorConfig.Status.Conditions, metav1.Condition{
+		Type:               ReconcileCompleted,
+		Status:             metav1.ConditionTrue,
+		Reason:             ReconcileComplete,
+		Message:            fmt.Sprintf("Reconciled successfully"),
+		LastTransitionTime: metav1.Time{Time: time.Now()},
+	})
+	err := r.Status().Update(ctx, operatorConfig)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
