@@ -1,6 +1,22 @@
 # Migration Toolkit for Red Hat OpenShift Operator
 This operator is the entrypoint for installing the Migration Toolkit for Red Hat OpenShift (crane).
 
+## A list of our components
+* crane CLI
+https://github.com/konveyor/crane
+
+* The OpenShift UI Console plugin
+https://github.com/konveyor/crane-ui-plugin
+
+* A runtime image for the crane cli
+https://github.com/konveyor/crane-runner/
+
+* Proxy that allows the plugin to communicate with remote clusters
+https://github.com/konveyor/crane-reverse-proxy
+
+* Service for managing secrets related to remote clusters
+https://github.com/konveyor/crane-secret-service
+
 ## Compatibility
 
 *Note:*
