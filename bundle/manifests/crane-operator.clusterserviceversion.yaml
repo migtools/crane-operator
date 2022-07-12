@@ -15,9 +15,8 @@ metadata:
       ]
     capabilities: Basic Install
     certified: "false"
-    containerImage: quay.io/konveyor/crane-operator-container:latest
-    createdAt: 2022-05-31T05:33:00Z
     console.openshift.io/plugins: '["crane-ui-plugin"]'
+    containerImage: quay.io/konveyor/crane-operator-container:latest
     operatorframework.io/suggested-namespace: openshift-migration-toolkit
     operators.operatorframework.io/builder: operator-sdk-v1.15.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
