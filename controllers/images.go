@@ -23,19 +23,19 @@ import (
 type ImageFunction func() string
 
 func CraneRunnerImage() string {
-	return getEnvVar("CRANE_RUNNER_IMAGE", "quay.io/konveyor/crane-runner:latest")
+	return getEnvVar("RELATED_IMAGE_CRANE_RUNNER", "quay.io/konveyor/crane-runner:latest")
 }
 
 func CraneUIPluginImage() string {
-	return getEnvVar("CRANE_UI_PLUGIN_IMAGE", "quay.io/konveyor/crane-ui-plugin:latest")
+	return getEnvVar("RELATED_IMAGE_CRANE_UI_PLUGIN", "quay.io/konveyor/crane-ui-plugin:latest")
 }
 
 func CraneReverseProxyImage() string {
-	return getEnvVar("CRANE_REVERSE_PROXY_IMAGE", "quay.io/konveyor/crane-reverse-proxy:latest")
+	return getEnvVar("RELATED_IMAGE_CRANE_REVERSE_PROXY", "quay.io/konveyor/crane-reverse-proxy:latest")
 }
 
 func CraneSecretServiceImage() string {
-	return getEnvVar("CRANE_SECRET_SERVICE_IMAGE", "quay.io/konveyor/crane-secret-service:latest")
+	return getEnvVar("RELATED_IMAGE_CRANE_SECRET_SERVICE", "quay.io/konveyor/crane-secret-service:latest")
 }
 
 func getEnvVar(key, def string) string {
