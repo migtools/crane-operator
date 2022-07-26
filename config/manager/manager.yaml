@@ -35,13 +35,13 @@ spec:
         imagePullPolicy: Always
         name: manager
         env:
-          - name: CRANE_RUNNER_IMAGE
+          - name: RELATED_IMAGE_CRANE_RUNNER
             value: quay.io/konveyor/crane-runner:latest
-          - name: CRANE_UI_PLUGIN_IMAGE
+          - name: RELATED_IMAGE_CRANE_UI_PLUGIN
             value: quay.io/konveyor/crane-ui-plugin:latest
-          - name: CRANE_REVERSE_PROXY_IMAGE
+          - name: RELATED_IMAGE_CRANE_REVERSE_PROXY
             value: quay.io/konveyor/crane-reverse-proxy:latest
-          - name: CRANE_SECRET_SERVICE_IMAGE
+          - name: RELATED_IMAGE_CRANE_SECRET_SERVICE
             value: quay.io/konveyor/crane-secret-service:latest
         securityContext:
           allowPrivilegeEscalation: false

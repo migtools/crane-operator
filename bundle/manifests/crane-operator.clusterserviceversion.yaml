@@ -18,7 +18,7 @@ metadata:
     console.openshift.io/plugins: '["crane-ui-plugin"]'
     containerImage: quay.io/konveyor/crane-operator-container:latest
     operatorframework.io/suggested-namespace: openshift-migration-toolkit
-    operators.operatorframework.io/builder: operator-sdk-v1.15.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.22.2
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/konveyor/crane-operator
     support: Red Hat
@@ -107,7 +107,9 @@ spec:
           - get
         serviceAccountName: proxy
       deployments:
-      - name: crane-operator-controller-manager
+      - label:
+          control-plane: controller-manager
+        name: crane-operator-controller-manager
         spec:
           replicas: 1
           selector:
@@ -146,13 +148,13 @@ spec:
                 command:
                 - /manager
                 env:
-                - name: CRANE_RUNNER_IMAGE
+                - name: RELATED_IMAGE_CRANE_RUNNER
                   value: quay.io/konveyor/crane-runner:latest
-                - name: CRANE_UI_PLUGIN_IMAGE
+                - name: RELATED_IMAGE_CRANE_UI_PLUGIN
                   value: quay.io/konveyor/crane-ui-plugin:latest
-                - name: CRANE_REVERSE_PROXY_IMAGE
+                - name: RELATED_IMAGE_CRANE_REVERSE_PROXY
                   value: quay.io/konveyor/crane-reverse-proxy:latest
-                - name: CRANE_SECRET_SERVICE_IMAGE
+                - name: RELATED_IMAGE_CRANE_SECRET_SERVICE
                   value: quay.io/konveyor/crane-secret-service:latest
                 image: quay.io/konveyor/crane-operator-container:latest
                 imagePullPolicy: Always
@@ -288,8 +290,8 @@ spec:
     name: crane-runner
   - image: quay.io/konveyor/crane-ui-plugin:latest
     name: crane-ui-plugin
-  - image: quay.io/konveyor/crane-secret-service:latest
-    name: crane-secret-service
   - image: quay.io/konveyor/crane-reverse-proxy:latest
     name: crane-reverse-proxy
+  - image: quay.io/konveyor/crane-secret-service:latest
+    name: crane-secret-service
   version: 99.0.0
