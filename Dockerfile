@@ -22,10 +22,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /go/src/manager main.go
 FROM registry.access.redhat.com/ubi8-minimal
 WORKDIR /
 COPY --from=builder /go/src/manager .
-COPY deploy/artifacts/manifests.yaml manifests.yaml
+COPY deploy/artifacts/crane-runner.yaml crane-runner.yaml
 COPY deploy/artifacts/crane-ui-plugin.yaml crane-ui-plugin.yaml
-COPY deploy/artifacts/proxy.yaml proxy.yaml
-COPY deploy/artifacts/secret-service.yaml secret-service.yaml
+COPY deploy/artifacts/crane-reverse-proxy.yaml crane-reverse-proxy.yaml
+COPY deploy/artifacts/crane-secret-service.yaml crane-secret-service.yaml
 
 USER 65532:65532
 

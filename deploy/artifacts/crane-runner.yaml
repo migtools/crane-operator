@@ -12,6 +12,10 @@ spec:
   - image: quay.io/konveyor/crane-runner:latest
     name: crane-apply
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
       crane apply \
         --export-dir=$(workspaces.export.path) \
         --transform-dir=$(workspaces.transform.path) \
@@ -63,6 +67,10 @@ spec:
     image: quay.io/konveyor/crane-runner:latest
     name: crane-export
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
       crane export \
         --context="$(params.context)" \
         --namespace="$(params.namespace)" \
@@ -75,6 +83,114 @@ spec:
       in other tasks.
     mountPath: /var/crane/export
     name: export
+  - description: |
+      The kubeconfig for accessing the cluster.
+    name: kubeconfig
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Sync the internal images of one cluster's registry to another.
+  labels:
+    app: crane-runner
+  name: crane-image-sync
+spec:
+  params:
+  - description: |
+      Name of the context used for accessing the source cluster.
+    name: src-context
+    type: string
+  - description: |
+      This is the internal registry url (ie. image-registry.openshift-image-registry.svc:5000).
+    name: src-internal-registry-url
+    type: string
+  - description: |
+      This is the public registry url.
+    name: src-public-registry-url
+    type: string
+  - default: "true"
+    description: |
+      Require HTTPS and verify certificates when talking to the container registry or daemon.
+    name: src-tls-verify
+    type: string
+  - description: |
+      Name of the context used for accessing the destination cluster.
+    name: dest-context
+    type: string
+  - description: |
+      This is the public registry url of the destination cluster.
+    name: dest-public-registry-url
+    type: string
+  - description: |
+      The namespace where the images should be synced.
+    name: dest-namespace
+    type: string
+  - default: "true"
+    description: |
+      Require HTTPS and verify certificates when talking to the container registry or daemon.
+    name: dest-tls-verify
+    type: string
+  steps:
+  - env:
+    - name: SRC_INTERNAL_URL
+      value: $(params.src-internal-registry-url)
+    - name: SRC_PUBLIC_URL
+      value: $(params.src-public-registry-url)
+    image: quay.io/konveyor/crane-runner:latest
+    name: crane-skopeo-sync-gen
+    script: |
+      set -e
+      set -o pipefail
+      set -x
+
+      crane skopeo-sync-gen \
+        --export-dir="$(workspaces.export.path)" \
+        --internal-registry-url=${SRC_INTERNAL_URL} \
+        --registry-url=${SRC_PUBLIC_URL} | tee "$(workspaces.skopeo.path)/source.yaml"
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/kubeconfig
+    - name: SRC_CONTEXT
+      value: $(params.src-context)
+    - name: SRC_TLS_VERIFY
+      value: $(params.src-tls-verify)
+    - name: DEST_CONTEXT
+      value: $(params.dest-context)
+    - name: DEST_TLS_VERIFY
+      value: $(params.dest-tls-verify)
+    - name: DEST_REGISTRY
+      value: $(params.dest-public-registry-url)
+    - name: DEST_NAMESPACE
+      value: $(params.dest-namespace)
+    image: quay.io/konveyor/crane-runner:latest
+    name: skopeo-sync
+    script: |
+      set -e
+      set -o pipefail
+      set -x
+
+      skopeo sync \
+        --src yaml \
+        --src-username "$(oc --context ${SRC_CONTEXT} whoami)" \
+        --src-password "$(oc --context ${SRC_CONTEXT} whoami -t)" \
+        --src-tls-verify=${SRC_TLS_VERIFY} \
+        --dest docker \
+        --dest-username "$(oc --context ${DEST_CONTEXT} whoami)" \
+        --dest-password "$(oc --context ${DEST_CONTEXT} whoami -t)" \
+        --dest-tls-verify=${DEST_TLS_VERIFY} \
+        "$(workspaces.skopeo.path)/source.yaml" \
+        "${DEST_REGISTRY}/${DEST_NAMESPACE}"
+  workspaces:
+  - description: |
+      This is the folder where the results of crane export were stored.
+    mountPath: /var/crane/export
+    name: export
+  - description: |
+      This is the folder where we will store the results of crane skopeo-sync-gen.
+    mountPath: /var/crane/skopeo
+    name: skopeo
   - description: |
       The kubeconfig for accessing the cluster.
     name: kubeconfig
@@ -119,6 +235,10 @@ spec:
     image: quay.io/konveyor/crane-runner:latest
     name: crane-export
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
       export KUBECONFIG=$(workspaces.kubeconfig.path)/kubeconfig
 
       set +x
@@ -166,6 +286,10 @@ spec:
   - image: quay.io/konveyor/crane-runner:latest
     name: kustomize-namespace
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
       # Copy apply resources into kustomize workspace
       cp -r "$(workspaces.apply.path)/resources/$(params.source-namespace)/." "$(workspaces.kustomize.path)"
 
@@ -242,12 +366,17 @@ spec:
   - default: ""
     description: |
       Size of the destination volume to create.
-    name: dest-pvc-capacity
+    name: dest-storage-requests
     type: string
   - default: ""
     description: |
       The name of the networking endpoint to be used for ingress traffic in the destination cluster
     name: endpoint-type
+    type: string
+  - default: "false"
+    description: |
+      Enable checksum verification (--verify). Valid values are "true" or "false".
+    name: verify
     type: string
   steps:
   - env:
@@ -259,21 +388,42 @@ spec:
       value: $(params.dest-namespace)
     - name: DEST_STORAGE_CLASS_NAME
       value: $(params.dest-storage-class-name)
-    - name: DEST_PVC_CAPACITY
-      value: $(params.dest-pvc-capacity)
+    - name: DEST_STORAGE_REQUESTS
+      value: $(params.dest-storage-requests)
     - name: ENDPOINT_TYPE
       value: $(params.endpoint-type)
+    - name: VERIFY
+      value: $(params.verify)
     image: quay.io/konveyor/crane-runner:latest
     name: crane-transfer-pvc
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
+      DEST_PVC_NAME="${DEST_PVC_NAME:-$(params.source-pvc-name)}"
+      DEST_NAMESPACE="${DEST_NAMESPACE:-$(params.source-namespace)}"
+
+      EXTRA_ARGS=""
+      if [ ! -z "${DEST_STORAGE_CLASS_NAME}" ]; then
+        EXTRA_ARGS+=" --dest-storage-class=${DEST_STORAGE_CLASS_NAME}"
+      fi
+      if [ ! -z "${DEST_STORAGE_REQUESTS}" ]; then
+        EXTRA_ARGS+=" --dest-storage-requests=${DEST_STORAGE_REQUESTS}"
+      fi
+      if [ ! -z "${ENDPOINT_TYPE}" ]; then
+        EXTRA_ARGS+=" --endpoint=${ENDPOINT_TYPE}"
+      fi
+      if [ "${VERIFY}" == "true" ]; then
+        EXTRA_ARGS+=" --verify"
+      fi
+
       crane transfer-pvc \
         --source-context=$(params.source-context) \
         --destination-context=$(params.dest-context) \
-        --pvc-name $(params.source-pvc-name):$(params.dest-pvc-name) \
-        --pvc-namespace $(params.source-namespace):$(params.dest-namespace) \
-        --dest-storage-class $(params.dest-storage-class-name) \
-        --dest-storage-requests $(params.dest-pvc-capacity) \
-        --endpoint $(params.endpoint-type)
+        --pvc-name $(params.source-pvc-name):${DEST_PVC_NAME} \
+        --pvc-namespace $(params.source-namespace):${DEST_NAMESPACE} \
+        ${EXTRA_ARGS}
   workspaces:
   - description: |
       The kubeconfig for accessing the source cluster.
@@ -291,15 +441,35 @@ metadata:
     app: crane-runner
   name: crane-transform
 spec:
+  params:
+  - default: ""
+    description: |
+      Comma separated list of `flag-name=value` pairs. These flags with values
+      will be passed into all plugins that are executed in the transform
+      operation.
+    name: optional-flags
+    type: string
   steps:
-  - image: quay.io/konveyor/crane-runner:latest
+  - env:
+    - name: OPTIONAL_FLAG_VALUES
+      value: $(params.optional-flags)
+    image: quay.io/konveyor/crane-runner:latest
     name: crane-transform
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
+      if [ ! -z "${OPTIONAL_FLAG_VALUES}" ]; then
+        OPTIONAL_FLAGS="--optional-flags=${OPTIONAL_FLAG_VALUES}"
+      fi
+
       crane transform \
         --ignored-patches-dir="$(workspaces.ignored-patches.path)" \
         --flags-file="$(workspaces.craneconfig.path)" \
         --export-dir="$(workspaces.export.path)" \
-        --transform-dir=$(workspaces.transform.path)
+        --transform-dir=$(workspaces.transform.path) \
+        ${OPTIONAL_FLAGS}
 
       find $(workspaces.transform.path)
       if [ "$(workspaces.ignored-patches.bound)" == "true" ]; then
@@ -344,6 +514,10 @@ spec:
   - image: quay.io/konveyor/crane-runner:latest
     name: kubectl-apply
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
       if [ "$(workspaces.kubeconfig.bound)" == "true" ] ; then
         export KUBECONFIG="$(workspaces.kubeconfig.path)/kubeconfig"
       fi
@@ -382,6 +556,10 @@ spec:
   - image: quay.io/konveyor/crane-runner:latest
     name: kubectl-apply
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
       if [ "$(workspaces.kubeconfig.bound)" == "true" ] ; then
         export KUBECONFIG="$(workspaces.kubeconfig.path)/kubeconfig"
       fi
@@ -432,6 +610,10 @@ spec:
     image: quay.io/konveyor/crane-runner:latest
     name: kubectl-scale-down
     script: |
+      set -e
+      set -o pipefail
+      set -x
+
       #!/bin/bash
       count=$(kubectl get --context "$(params.context)" "$(params.resource-type)" --namespace "$(params.namespace)" 2> /dev/null | wc -l)
       if [ $count -ne "0" ]; then
@@ -440,4 +622,57 @@ spec:
   workspaces:
   - description: |
       The kubeconfig for accessing the source cluster.
+    name: kubeconfig
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Get registry info from an OpenShift cluster.
+  labels:
+    app: crane-runner
+  name: oc-registry-info
+spec:
+  params:
+  - description: |
+      The name of the context from kubeconfig to ask for registry info.
+    name: context
+    type: string
+  - default: "false"
+    description: |
+      Should the task fail if the internal|public registry URL cannot be found.
+    name: strict
+    type: string
+  results:
+  - description: Internal registry URL.
+    name: internal
+  - description: Public registry URL.
+    name: public
+  steps:
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/kubeconfig
+    - name: STRICT_CHECK
+      value: $(params.strict)
+    image: quay.io/konveyor/crane-runner:latest
+    name: oc-registry-info
+    script: |
+      set -e
+      set -x
+
+      internal=$(oc --context="$(params.context)" registry info --internal || echo "")
+      public=$(oc --context="$(params.context)" registry info --public || \
+        oc --context="$(params.context)" get route default-route -n openshift-image-registry --template='{{ .spec.host }}' || \
+        oc --context="$(params.context)" get route docker-registry -n default --template='{{ .spec.host }}' || \
+        echo ""
+      )
+
+      [ "${STRICT_CHECK}" == "true" ] && [ -z "${internal}" ] && exit 2
+      [ "${STRICT_CHECK}" == "true" ] && [ -z "${public}" ] && exit 2
+      echo -n "${internal}" | tee $(results.internal.path)
+      echo -n "${public}" | tee $(results.public.path)
+  workspaces:
+  - description: |
+      The kubeconfig for accessing the cluster.
     name: kubeconfig
