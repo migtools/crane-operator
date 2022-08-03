@@ -1,0 +1,443 @@
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Generate YAML by applying transformations to the exported resources.
+  labels:
+    app: crane-runner
+  name: crane-apply
+spec:
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: crane-apply
+    script: |
+      crane apply \
+        --export-dir=$(workspaces.export.path) \
+        --transform-dir=$(workspaces.transform.path) \
+        --output-dir=$(workspaces.apply.path)
+      find $(workspaces.apply.path)
+  workspaces:
+  - description: |
+      This is the folder where the results of crane export were stored.
+    mountPath: /var/crane/export
+    name: export
+  - description: |
+      This is the folder where we will store the results of crane transform.
+    mountPath: /var/crane/transform
+    name: transform
+  - description: |
+      This is the folder where we will store the results of crane apply.
+    mountPath: /var/crane/apply
+    name: apply
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Discover, and write to disk, all of the resources from a specified
+      cluster's namespace.
+  labels:
+    app: crane-runner
+  name: crane-export
+spec:
+  params:
+  - description: |
+      The name of the context from kubeconfig representing the source
+      cluster.
+
+      You can get this information in your current environment using
+      `kubectl config get-contexts` to describe your one or many
+      contexts.
+    name: context
+    type: string
+  - description: |
+      The namespace from which to export resources.
+    name: namespace
+    type: string
+  steps:
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/kubeconfig
+    image: quay.io/konveyor/crane-runner:latest
+    name: crane-export
+    script: |
+      crane export \
+        --context="$(params.context)" \
+        --namespace="$(params.namespace)" \
+        --export-dir="$(workspaces.export.path)"
+
+      find $(workspaces.export.path)
+  workspaces:
+  - description: |
+      Directory where results of crane export will be stored for future use
+      in other tasks.
+    mountPath: /var/crane/export
+    name: export
+  - description: |
+      The kubeconfig for accessing the cluster.
+    name: kubeconfig
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      This Task is responsible for taking a secret with keys `url` and `token`,
+      logging into the cluster using `oc login`, renaming the context, and
+      saving the result in the kubeconfig workspace.
+
+      The idea is that subsequent Tasks in a Pipeline or PipelineRun could
+      reference this task first to populate a kubeconfig based on cluster
+      auth stored in a secret.
+  labels:
+    app: crane-runner
+  name: crane-kubeconfig-generator
+spec:
+  params:
+  - description: |
+      The name of the secret holding cluster API Server URL and Token.
+    name: cluster-secret
+    type: string
+  - description: |
+      The name to give the context.
+    name: context-name
+    type: string
+  steps:
+  - env:
+    - name: CLUSTER_URL
+      valueFrom:
+        secretKeyRef:
+          key: url
+          name: $(params.cluster-secret)
+    - name: CLUSTER_TOKEN
+      valueFrom:
+        secretKeyRef:
+          key: token
+          name: $(params.cluster-secret)
+    image: quay.io/konveyor/crane-runner:latest
+    name: crane-export
+    script: |
+      export KUBECONFIG=$(workspaces.kubeconfig.path)/kubeconfig
+
+      set +x
+      oc login --insecure-skip-tls-verify --token=$CLUSTER_TOKEN $CLUSTER_URL
+      set -x
+
+      kubectl config rename-context "$(kubectl config current-context)" "$(params.context-name)"
+  workspaces:
+  - description: |
+      Where the generated kubeconfig will be saved.
+    name: kubeconfig
+    readOnly: false
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Initialize a kustomization.yaml for the manifests generated in crane-apply.
+  labels:
+    app: crane-runner
+  name: crane-kustomize-init
+spec:
+  params:
+  - description: Source namespace from export.
+    name: source-namespace
+    type: string
+  - default: ""
+    description: Add one or more labels
+    name: labels
+    type: string
+  - default: ""
+    description: Set the namePrefix field in the kustomization file.
+    name: name-prefix
+    type: string
+  - default: ""
+    description: Sets the value of the namespace field in the kustomization file.
+    name: namespace
+    type: string
+  - default: ""
+    description: Set the nameSuffix field in the kustomization file.
+    name: name-suffix
+    type: string
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: kustomize-namespace
+    script: |
+      # Copy apply resources into kustomize workspace
+      cp -r "$(workspaces.apply.path)/resources/$(params.source-namespace)/." "$(workspaces.kustomize.path)"
+
+      pushd "$(workspaces.kustomize.path)"
+      kustomize init --autodetect \
+        --labels "$(params.labels)" \
+        --nameprefix "$(params.name-prefix)" \
+        --namespace "$(params.namespace)" \
+        --namesuffix "$(params.name-suffix)"
+      kustomize build
+      popd
+      find "$(workspaces.kustomize.path)"
+  workspaces:
+  - description: |
+      This is the folder where the results from crane-apply are stored.
+    mountPath: /var/crane/apply
+    name: apply
+  - description: |
+      This is where the kustomize related manifests will be saved.
+    name: kustomize
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Sync's a single PVC from source to destination cluster
+  labels:
+    app: crane-runner
+  name: crane-transfer-pvc
+spec:
+  params:
+  - description: |
+      The name of the context from kubeconfig representing the source
+      cluster.
+
+      You can get this information in your current environment using
+      `kubectl config get-contexts` to describe your one or many
+      contexts.
+    name: source-context
+    type: string
+  - description: |
+      The source cluster namespace in which pvc is synced.
+    name: source-namespace
+    type: string
+  - description: |
+      The name of the pvc to be synced from source cluster.
+    name: source-pvc-name
+    type: string
+  - description: |
+      The name of the context from kubeconfig representing the destination
+      cluster.
+
+      You can get this information in your current environment using
+      `kubectl config get-contexts` to describe your one or many
+      contexts.
+    name: dest-context
+    type: string
+  - default: ""
+    description: |
+      The name to give pvc in destination cluster.
+    name: dest-pvc-name
+    type: string
+  - default: ""
+    description: |
+      The source cluster namespace in which pvc is synced.
+    name: dest-namespace
+    type: string
+  - default: ""
+    description: |
+      The name of the storage class to use in the destination cluster.
+    name: dest-storage-class-name
+    type: string
+  - default: ""
+    description: |
+      Size of the destination volume to create.
+    name: dest-pvc-capacity
+    type: string
+  - default: ""
+    description: |
+      The name of the networking endpoint to be used for ingress traffic in the destination cluster
+    name: endpoint-type
+    type: string
+  steps:
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/kubeconfig
+    - name: DEST_PVC_NAME
+      value: $(params.dest-pvc-name)
+    - name: DEST_NAMESPACE
+      value: $(params.dest-namespace)
+    - name: DEST_STORAGE_CLASS_NAME
+      value: $(params.dest-storage-class-name)
+    - name: DEST_PVC_CAPACITY
+      value: $(params.dest-pvc-capacity)
+    - name: ENDPOINT_TYPE
+      value: $(params.endpoint-type)
+    image: quay.io/konveyor/crane-runner:latest
+    name: crane-transfer-pvc
+    script: |
+      crane transfer-pvc \
+        --source-context=$(params.source-context) \
+        --destination-context=$(params.dest-context) \
+        --pvc-name $(params.source-pvc-name):$(params.dest-pvc-name) \
+        --pvc-namespace $(params.source-namespace):$(params.dest-namespace) \
+        --dest-storage-class $(params.dest-storage-class-name) \
+        --dest-storage-requests $(params.dest-pvc-capacity) \
+        --endpoint $(params.endpoint-type)
+  workspaces:
+  - description: |
+      The kubeconfig for accessing the source cluster.
+    name: kubeconfig
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Take the resources from a `crane-export` and generate JSON patches to
+      remove cluster specific metadata and status information. If optional-flags
+      are defined, they will be passed to all enabled plugins.
+  labels:
+    app: crane-runner
+  name: crane-transform
+spec:
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: crane-transform
+    script: |
+      crane transform \
+        --ignored-patches-dir="$(workspaces.ignored-patches.path)" \
+        --flags-file="$(workspaces.craneconfig.path)" \
+        --export-dir="$(workspaces.export.path)" \
+        --transform-dir=$(workspaces.transform.path)
+
+      find $(workspaces.transform.path)
+      if [ "$(workspaces.ignored-patches.bound)" == "true" ]; then
+        find $(workspaces.ignored-patches.path)
+      fi
+  workspaces:
+  - description: |
+      This is the folder where the results of crane export were stored.
+    mountPath: /var/crane/export
+    name: export
+  - description: |
+      This is the folder where we will store the results of crane transform.
+    mountPath: /var/crane/transform
+    name: transform
+  - description: |
+      This is the folder where the results of crane ignored-patches were stored.
+    mountPath: /var/crane/ignored-patches
+    name: ignored-patches
+    optional: true
+  - description: |
+      This is where we hold the configuration file for crane.
+    mountPath: /var/crane/config
+    name: craneconfig
+    optional: true
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Take the resources from crane-apply and run kubectl apply -f.
+  labels:
+    app: crane-runner
+  name: kubectl-apply-files
+spec:
+  params:
+  - default: ""
+    description: The context from the kubeconfig that represents the destination cluster.
+    name: context
+    type: string
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: kubectl-apply
+    script: |
+      if [ "$(workspaces.kubeconfig.bound)" == "true" ] ; then
+        export KUBECONFIG="$(workspaces.kubeconfig.path)/kubeconfig"
+      fi
+
+      kubectl apply --recursive=true -f $(workspaces.apply.path)/
+  workspaces:
+  - description: |
+      This is the folder storing the resources to be applied using kubectl.
+    mountPath: /var/crane/apply
+    name: apply
+  - description: |
+      The user's kubeconfig. Otherwise, will just rely on mounted credentials
+      to access the cluster's API server.
+
+      See https://kubernetes.io/docs/tasks/run-application/access-api-from-pod
+      for more details.
+    name: kubeconfig
+    optional: true
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Run kubectl apply -k against a kustomize directory.
+  labels:
+    app: crane-runner
+  name: kubectl-apply-kustomize
+spec:
+  params:
+  - default: ""
+    description: The context from the kubeconfig that represents the destination cluster.
+    name: context
+    type: string
+  steps:
+  - image: quay.io/konveyor/crane-runner:latest
+    name: kubectl-apply
+    script: |
+      if [ "$(workspaces.kubeconfig.bound)" == "true" ] ; then
+        export KUBECONFIG="$(workspaces.kubeconfig.path)/kubeconfig"
+      fi
+
+      kubectl --context="$(params.context)" apply -k "$(workspaces.kustomize.path)"
+  workspaces:
+  - description: |
+      This is the folder storing a kustomization.yaml file to be applied.
+    name: kustomize
+  - description: |
+      The user's kubeconfig. Otherwise, will just rely on mounted credentials
+      to access the cluster's API server.
+
+      See https://kubernetes.io/docs/tasks/run-application/access-api-from-pod
+      for more details.
+    name: kubeconfig
+    optional: true
+---
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
+metadata:
+  annotations:
+    description: |
+      Scale resource down using kubectl scale.
+  labels:
+    app: crane-runner
+  name: kubectl-scale-down
+spec:
+  params:
+  - default: ""
+    description: |
+      Context to use when scaling down resources
+    name: context
+    type: string
+  - default: ""
+    description: |
+      Namespace to use when scaling down resources
+    name: namespace
+    type: string
+  - description: |
+      The resource type to be scaled down.
+    name: resource-type
+    type: string
+  steps:
+  - env:
+    - name: KUBECONFIG
+      value: $(workspaces.kubeconfig.path)/kubeconfig
+    image: quay.io/konveyor/crane-runner:latest
+    name: kubectl-scale-down
+    script: |
+      #!/bin/bash
+      count=$(kubectl get --context "$(params.context)" "$(params.resource-type)" --namespace "$(params.namespace)" 2> /dev/null | wc -l)
+      if [ $count -ne "0" ]; then
+        kubectl scale --context "$(params.context)" --namespace "$(params.namespace)" --replicas=0 "$(params.resource-type)" --all;
+      fi
+  workspaces:
+  - description: |
+      The kubeconfig for accessing the source cluster.
+    name: kubeconfig
