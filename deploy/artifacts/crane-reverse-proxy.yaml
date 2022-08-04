@@ -53,6 +53,7 @@ spec:
         secret:
           defaultMode: 256
           secretName: crane-reverse-proxy-certs
+---
 apiVersion: v1
 kind: Service
 metadata:
